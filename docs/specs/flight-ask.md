@@ -56,12 +56,14 @@ The default path is resolved exactly as orc's `events.path()` does it.
 
 **The agent** (follows `AGENT-APPS.md` sections 1 to 6; ADR 0003).
 `ask(question, deps)` in the core runs `claude-sonnet-5-5`, named once in the core, through the Anthropic TypeScript SDK's tool runner, taking one model call at a time so the core counts calls, applies the timeout and records which ids each tool returned.
-The tools only read, take Zod-parsed input, and return at most 100 events or deliveries with a `truncated` flag:
+The tools only read and take Zod-parsed input.
+Each result is capped at 100 events or deliveries and at 32 KB (32,768 bytes) of UTF-8 JSON, the caps being constants in the core; when either cap cuts it, rows are dropped from the end until it fits and the result says `truncated: true` (otherwise `truncated: false`).
+The tools run within the question's timeout and have none of their own (see Assumptions).
 
 - `describe_log {}`: the columns, the event types and their `data` fields, the row count, the first and last time, and the factory versions present.
 - `list_deliveries { source?, project?, limit? }`: per delivery its id, project, change, first and last time, factory versions, and event counts by type.
 - `read_delivery { delivery }`: that delivery's events, oldest first.
-- `find_events { type?, source?, project?, delivery?, since?, until?, limit? }`: matching events oldest first, with the total matching count.
+- `find_events { type?, source?, project?, delivery?, since?, until?, limit? }`: matching events oldest first; it gives no total count, only whether there are more (`truncated`).
 
 Each event comes back as `{ id, time, type, project, change, delivery, source, data }`, with `data` parsed from JSON and `project` reduced to the last segment of its folder path (Q1, ADR 0003); friction notes are sent as they are.
 The `project` filters match on that last segment, so the model never needs, or sees, a full path.
@@ -112,7 +114,9 @@ Dependencies: `@anthropic-ai/sdk` (the request) and `zod` 4 (`TYPESCRIPT.md`); d
 ## Assumptions
 
 - Where it runs, who runs it, where it is deployed and whether it is published (`TYPESCRIPT.md`'s "ask before assuming"): Node on the owner's Mac only, run by the owner at a terminal, never deployed, used only from this repository; the core stays runtime-free for the later Worker.
-- Default limits: 10 model calls, 120 seconds, 4,096 output tokens per call, 100 rows per tool result; any of them is a one-line change.
+- Default limits: 10 model calls, 120 seconds, 4,096 output tokens per call, and 100 rows and 32 KB of JSON per tool result; any of them is a one-line change.
+- The tools have no timeout of their own, a justified departure from `AGENT-APPS.md` section 2 ("a row limit, a size limit and a timeout"), as the owner decided: each tool is one parameterised query against a small local file, so the question's 120-second timeout bounds them too, and a per-tool timer would need `node:sqlite` queries to be interruptible, which a synchronous `DatabaseSync` call is not.
+- If a single row is over 32 KB on its own, the result holds no rows and says `truncated: true`, rather than being a tool error, so the model can narrow its query.
 - The final reply is JSON text in the last message rather than a final "submit" tool, so a replay is plain Messages API bodies; the engineer may enforce it with the API's structured outputs where the SDK allows them alongside tools.
 - I could not load the Anthropic SDK reference in this session, so two things are unverified: that the tool runner can be stepped one call at a time with a caller's `AbortSignal`, and that `claude-sonnet-5-5` accepts structured outputs with tools. If the runner cannot, a plain loop over `messages.create` is used instead and `docs/ARCHITECTURE.md` says so.
 - I could not verify `node:sqlite`'s stability level in Node 26, or that a read-only connection opens a WAL log cleanly when orc has left no `-shm` file; the engineer checks both on setup, and ADR 0002 says what reopens the choice.

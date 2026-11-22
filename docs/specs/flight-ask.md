@@ -1,6 +1,6 @@
 ---
 title: flight ask
-status: draft
+status: approved
 size: full
 criteria:
   - id: AC1

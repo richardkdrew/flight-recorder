@@ -1,0 +1,17 @@
+{
+  "name": "flight",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "flight": "./src/main.ts"
+  },
+  "engines": {
+    "node": "^26.0.0"
+  },
+  "dependencies": {
+    "@flight/core": "*"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6"
+  }
+}

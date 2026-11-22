@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Starts a copy of the flight CLI with `make dev`, the way the owner does, and checks it opens:
+# Node loads the CLI and its core from source, the CLI answers with a message of its own
+# and exits by itself, with no crash. The copy gets a state folder of its own and no API key,
+# so it never touches the owner's log or key, and everything it made is removed afterwards.
+set -uo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+root="$(dirname "$here")"
+limit=60
+
+tmp="$(mktemp -d)"
+pid=""
+cleanup() {
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then kill "$pid" 2>/dev/null; fi
+  rm -rf "$tmp"
+}
+trap cleanup EXIT
+
+fail() {
+  echo "smoke: FAILED: $1"
+  if [ -s "$tmp/out" ]; then echo "--- stdout ---"; cat "$tmp/out"; fi
+  if [ -s "$tmp/err" ]; then echo "--- stderr ---"; cat "$tmp/err"; fi
+  exit 1
+}
+
+cd "$root" || exit 1
+
+if [ ! -f node_modules/.package-lock.json ]; then
+  echo "smoke: installing packages (npm ci), as make setup does"
+  if command -v fnm >/dev/null 2>&1 && [ -f .node-version ]; then
+    fnm exec --using=.node-version -- npm ci --ignore-scripts --no-audit --no-fund >/dev/null || fail "npm ci failed"
+  else
+    npm ci --ignore-scripts --no-audit --no-fund >/dev/null || fail "npm ci failed"
+  fi
+fi
+
+echo "smoke: starting the CLI with 'make dev' (no arguments), its state in a temporary folder and no API key"
+env -u ANTHROPIC_API_KEY XDG_STATE_HOME="$tmp/state" make -s dev >"$tmp/out" 2>"$tmp/err" &
+pid=$!
+
+waited=0
+while kill -0 "$pid" 2>/dev/null; do
+  if [ "$waited" -ge "$((limit * 2))" ]; then
+    fail "the CLI was still running after ${limit} seconds; a CLI with no arguments should answer and exit"
+  fi
+  sleep 0.5
+  waited=$((waited + 1))
+done
+wait "$pid"
+status=$?
+pid=""
+
+# make exits 2 whenever its command fails; the command's own exit code is in make's error line.
+code=0
+if [ "$status" -ne 0 ]; then
+  code="$(sed -n 's/^make: \*\*\* \[[^]]*dev\] Error \([0-9][0-9]*\).*/\1/p' "$tmp/err" | tail -1)"
+  [ -n "$code" ] || code="$status"
+fi
+echo "smoke: the CLI exited by itself with code $code"
+
+if grep -Eq '^[[:space:]]+at |node:internal|ERR_[A-Z_]+|SyntaxError|TypeError|ReferenceError|Cannot find (module|package)' "$tmp/err"; then
+  fail "the CLI crashed while starting (Node reported an error)"
+fi
+case "$code" in
+  0 | 1 | 2) ;;
+  *) fail "exit code $code: expected 0, or 1 or 2 for a message of its own" ;;
+esac
+message="$(grep -v '^make: ' "$tmp/err"; cat "$tmp/out")"
+if [ -z "$(printf '%s' "$message" | tr -d '[:space:]')" ]; then
+  fail "the CLI printed nothing"
+fi
+echo "smoke: it printed: $(printf '%s' "$message" | head -3)"
+if [ -e "$tmp/state/orc/events.db" ]; then
+  fail "the CLI created a log at its default path"
+fi
+echo "smoke: passed: the CLI starts from source and answers"

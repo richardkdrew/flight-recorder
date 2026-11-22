@@ -99,9 +99,10 @@ The repository follows the owner's `AGENT-APPS.md` and `TYPESCRIPT.md` standards
   When the data is too thin, it says "not enough data yet" and what it would need.
 - **Untrusted text.** Friction notes, change names, a visitor's question and the model's own replies are data, never instructions.
 - **Versions are compared, not guessed.** Every event names the factory version that produced it, and that is how Flight Recorder measures whether a factory change helped.
-- **Private stays private.** The live log names folders on the owner's Mac and holds free-text notes, so it never leaves the Mac.
+- **Private stays private.** The live log names folders on the owner's Mac and holds free-text notes, so the live log is never published, and only what a question needs goes to the model provider (ADR 0003).
+  Tool results give each project as the last segment of its folder path, never the full path; friction notes are sent as they are.
   Only the published data set reaches the site or this repository.
-- **Spending is capped in code.** Every model call has a timeout and an output cap, and a daily spending cap is checked before each call.
+- **Spending is capped in code.** Every model call has a timeout and an output cap; from the live change on, a daily spending cap is checked before each call.
 
 ## Tests and evals
 

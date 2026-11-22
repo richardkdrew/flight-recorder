@@ -14,7 +14,7 @@ The live log names folders on the owner's Mac and holds free-text friction notes
 The model is `claude-sonnet-5-5`, named once in the core.
 The provider receives the prompt, the question and the tool results of that question, and nothing else from the Mac.
 Tool results give each project as its folder name, the last segment of its path, never the full path; friction notes are sent as they are.
-The owner confirms that Anthropic's current commercial API terms for keeping and training on API data are acceptable for this data.
+The owner accepted Anthropic's commercial API terms, for keeping and training on API data, for this data on 2026-11-23.
 
 ## Alternatives
 

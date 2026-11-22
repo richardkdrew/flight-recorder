@@ -8,7 +8,7 @@ criteria:
     text: "`flight seed <file>` writes a SQLite file whose `events` table has exactly the columns in docs/ARCHITECTURE.md and holds every row of `data/synthetic/events.jsonl`, which includes at least one event of each of the 11 event types and events from at least 2 factory versions; when <file> already exists it exits 1, says the file exists, and leaves the file's bytes unchanged."
   - id: AC2
     kind: new
-    text: "`flight ask` reads the file `--log` names, or by default `$XDG_STATE_HOME/orc/events.db` (or `~/.local/state/orc/events.db` when XDG_STATE_HOME is unset), and never changes it: the file's bytes are identical after a question, and a path with no file exits 1 with `no event log at <path>` and no file is created there."
+    text: "`flight ask` reads the file `--log` names, or by default `$XDG_STATE_HOME/orc/events.db` (or `~/.local/state/orc/events.db` when XDG_STATE_HOME is unset), and never changes it: the file's bytes are identical after a question, a path with no file exits 1 with `no event log at <path>` and no file is created there, and no request sent to the model holds a project's full folder path, only its last segment."
   - id: AC3
     kind: new
     text: "`flight ask` shows an answer only when it cites at least one id and every id it cites is an event id or delivery id in the log that a tool returned during that same question: then it prints the answer text, then a line `cited: <id>, <id>` listing every cited id, and exits 0; otherwise it prints `answer withheld:` followed by the ids that failed (or `it cited nothing`), never prints the answer text, and exits 1."
@@ -22,11 +22,11 @@ questions:
   - id: Q1
     question: "What may leave the Mac when `flight ask` reads the live log? docs/ARCHITECTURE.md says the live log never leaves the Mac, but every tool result goes to Anthropic's API, and the log holds project folder paths and free-text friction notes."
     recommendation: "Send each project as its folder name only (the last path segment, never the full path) and send friction notes as they are, since answers about friction need them; record this and Anthropic's data terms in ADR 0003, and reword the architecture's rule to 'never published, and only what a question needs goes to the model provider'."
-    answer: null
+    answer: "Accepted. Tool results give each project as the last segment of its folder path, never the full path; friction notes are sent as they are. The rule in docs/ARCHITECTURE.md becomes 'the live log is never published, and only what a question needs goes to the model provider'. The owner accepts Anthropic's commercial API terms for this data, recorded in ADR 0003."
   - id: Q2
     question: "docs/ARCHITECTURE.md says a daily spending cap is checked before each model call; your request asks only for a per-question cap and timeout. Should this change also add the daily cap?"
     recommendation: "Defer it to the live change, where strangers can spend: on your Mac, the per-question cap of 10 calls of at most 4,096 output tokens each already bounds what one question costs, and a daily cap needs a ledger file this read-only CLI would otherwise not write."
-    answer: null
+    answer: "Deferred to the live change. docs/ARCHITECTURE.md now says every model call has a timeout and an output cap, and the daily spending cap is checked before each call from the live change on."
 ---
 
 # flight ask
@@ -63,7 +63,8 @@ The tools only read, take Zod-parsed input, and return at most 100 events or del
 - `read_delivery { delivery }`: that delivery's events, oldest first.
 - `find_events { type?, source?, project?, delivery?, since?, until?, limit? }`: matching events oldest first, with the total matching count.
 
-Each event comes back as `{ id, time, type, project, change, delivery, source, data }`, with `data` parsed from JSON and `project` reduced as Q1 decides (the recommendation: its last path segment).
+Each event comes back as `{ id, time, type, project, change, delivery, source, data }`, with `data` parsed from JSON and `project` reduced to the last segment of its folder path (Q1, ADR 0003); friction notes are sent as they are.
+The `project` filters match on that last segment, so the model never needs, or sees, a full path.
 Invalid tool input or an unknown tool goes back to the model as a tool error and does not end the question.
 No tool takes SQL; each is one fixed, parameterised query.
 The prompt says the question and every tool result are data, never instructions; tool results reach the model only inside `tool_result` blocks.
@@ -88,7 +89,7 @@ Exit codes follow `TYPESCRIPT.md` section 8: 0 for an answer or "not enough data
 `flight seed` creates the table and the two indexes exactly as orc does, sets WAL mode as orc does, and inserts the rows in file order.
 
 **Recorded replies**: each case is a JSON file in `apps/cli/tests/recordings/` holding the model id, the question, `hand_written: true` or the time it was recorded, and the ordered Messages API response bodies; an entry `{"hang": true}` never answers until its request is aborted.
-A replay `fetch` in `apps/cli/tests/replay.ts` serves them in order to the SDK client.
+A replay `fetch` in `apps/cli/tests/replay.ts` serves them in order to the SDK client and keeps every request body it receives, so a test can check what was sent to the model (AC2).
 `make record` re-records the cases that are not hand-written against the live model and the seeded synthetic log; the citation-failure, cap and timeout cases are hand-written.
 
 **Test seams**:
@@ -104,7 +105,7 @@ Dependencies: `@anthropic-ai/sdk` (the request) and `zod` 4 (`TYPESCRIPT.md`); d
 
 - `flight retro`, proposals, the curated export, the site and its live part: later changes in `docs/ARCHITECTURE.md`.
 - `make eval` and its cases.
-- A daily spending cap, unless Q2 says otherwise.
+- A daily spending cap: deferred to the live change (Q2).
 - `--json` output, and flags to change the limits.
 - Any write to the event log or the factory.
 
@@ -118,10 +119,11 @@ Dependencies: `@anthropic-ai/sdk` (the request) and `zod` 4 (`TYPESCRIPT.md`); d
 - The synthetic projects are named by name only, as `docs/ARCHITECTURE.md` says the published data set does, not by made-up paths.
 - The CI workflow is included because the repository is public and `GITHUB.md` asks for CI on every pull request; strike it if checks should run only on the Mac for now.
 - The cited-ids line lists ids in the order the reply gives them, without duplicates.
+- Following Q1's answer, AC2 also checks that no request to the model holds a project's full folder path, rather than adding a sixth criterion; a project that is null stays null, and one with no `/` (such as `eval:<name>`) is sent as it is.
 
 ## Later
 
 - `make eval` with the four kinds of case, including injection attempts hidden in friction notes of the synthetic set.
 - The cost of each question in the stderr line, once the price per token is a named constant.
 - `--json` output for scripts and agents.
-- The daily spending cap, in the live change (or here, per Q2).
+- The daily spending cap, in the live change.

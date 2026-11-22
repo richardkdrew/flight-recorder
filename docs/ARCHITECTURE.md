@@ -45,6 +45,7 @@ CREATE TABLE events (
 | `orc.eval.finished.v1` | suite, cases, passed, harness, model, effort |
 | `orc.friction.noted.v1` | note: free text, and the only free text in the log |
 
+Event ids and delivery ids are 32-character hex strings, and orc keeps the file in WAL mode, with indexes on `(project, change)` and on `type`.
 The log holds no prompts, code, replies or review text.
 Review findings, escalations and the owner's decisions in words live on each change's pull request, as comments.
 The time from one command ending to the next starting is time the change waited on the owner, since nothing runs between two commands.
@@ -68,9 +69,10 @@ A small change has up to 3 criteria, no spec review, and up to 2 review rounds.
 
 It is a real agent, not a fixed prompt: for each question the model chooses which queries to run, runs them through its tools, reads the results, and carries on until it can answer with citations or must say there is not enough data.
 
-- Its tools only read: describe the schema, list deliveries, read one delivery's events, and run one query from a fixed set, with parameters.
+- Its tools only read: `describe_log`, `list_deliveries`, `read_delivery` and `find_events`, each one fixed query with parameters.
   No tool takes SQL from the model.
-- Every tool returns at most a set number of rows, and every answer has a cap on tool calls and on turns.
+- Every tool returns at most a set number of rows, and every question has a cap on model calls and a timeout, and says so plainly when it hits one.
+- Its final reply is JSON parsed with a schema: an answer with the ids it cites, or "not enough data yet" with what it would need.
 - It runs on the Anthropic TypeScript SDK's tool runner, which works the same in Node and in Cloudflare Workers.
 - The CLI uses `claude-sonnet-5-5`.
 
@@ -78,7 +80,12 @@ It is a real agent, not a fixed prompt: for each question the model chooses whic
 
 - **`packages/core`:** the agent: its tools, its prompts (as files), the citation check, the "not enough data" rule and the limits.
   It reaches data only through a small interface for read-only queries, so it never knows whether the data is a local SQLite file or D1.
-- **`apps/cli`:** the `flight` command, over a read-only SQLite connection.
+- **`apps/cli`:** the `flight` command (`flight ask`, `flight seed`), over a read-only `node:sqlite` connection (ADR 0002).
+- **`data/synthetic/events.jsonl`:** the synthetic data set, one event per line in the format of orc's own export; `flight seed <file>` writes it into a new log.
+
+The packages are one npm workspace, used as source with no build step (ADR 0001).
+Node 26 runs the CLI's TypeScript directly; `make setup` installs, `make check` runs the checks and the tests, and `make install` puts `flight` on the PATH.
+The CLI is never deployed; it runs only on the owner's Mac.
 - **`apps/web`** (from the site change): the public site, built with Astro Starlight and served by one Cloudflare Worker, which from the live change also runs the agent over D1, which is SQLite, so the same queries run in both places.
 
 ## What must always hold
@@ -100,7 +107,7 @@ The repository follows the owner's `AGENT-APPS.md` and `TYPESCRIPT.md` standards
 
 - `make check` runs the tests, which never call a live model.
   They use recorded replies to check the tools, the citation check, the "not enough data" rule, the limits, the schema for replies, and the injection guards.
-- `make eval` runs the live model against the published data set and prints a score for each kind of case beside the last run's: known answers, questions it should decline, citations that must match rows, and injection attempts.
+- `make eval` (from a later change) runs the live model against the published data set and prints a score for each kind of case beside the last run's: known answers, questions it should decline, citations that must match rows, and injection attempts.
   It never blocks a change.
 - `make record` records the replies the tests use again, and notes the model they came from.
 
@@ -151,7 +158,7 @@ It deploys from its own repository through GitHub Actions, as the factory's depl
 
 ## The changes, in order
 
-1. **`flight ask`:** grounded answers over a copy of the log, on the synthetic data set, with the core as its own package.
+1. **`flight ask`:** grounded answers over the factory's log, read-only, or another log with `--log`, with the synthetic data set and `flight seed`, and the core as its own package.
 2. **`flight retro`:** a retro over the deliveries since the last one, including the friction notes, every 5 accepted changes.
 3. **Proposals:** one per retro, opened as a GitHub issue on the factory repository from the CLI; its effect is reported after the next 5 changes.
 4. **The curated export** of Flight Recorder's own deliveries, which the owner approves.

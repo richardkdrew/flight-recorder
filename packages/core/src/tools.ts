@@ -1,5 +1,5 @@
 // The agent's four tools. Each only reads, takes Zod-parsed input, runs fixed parameterised queries,
-// and returns at most ROW_CAP rows and BYTE_CAP bytes of JSON. Every event id and delivery id a tool
+// and returns at most BYTE_CAP bytes of JSON, and at most ROW_CAP events or deliveries. Every event id and delivery id a tool
 // returns is added to `returned`, which the citation check reads.
 
 import * as z from "zod";
@@ -58,38 +58,47 @@ const FIELDS = [
 const encoder = new TextEncoder();
 const bytes = (text: string): number => encoder.encode(text).length;
 
+interface Fitted<T> {
+  readonly rows: readonly T[];
+  readonly truncated: boolean;
+  readonly text: string;
+}
+
 /**
  * Keeps the first rows that fit both caps, dropping from the end; `more` says the query had rows past these.
- * `envelope` is the result with `rows` as an empty list, so its size plus each row's is the result's size.
+ * `envelope` builds the whole result from the rows kept and the final `truncated`, and the cap is checked
+ * against that exact JSON. The result can only exceed BYTE_CAP if the envelope with no rows does on its own.
  */
 export function fitRows<T>(
   rows: readonly T[],
   more: boolean,
   envelope: (rows: readonly T[], truncated: boolean) => unknown,
-): {
-  readonly rows: readonly T[];
-  readonly truncated: boolean;
-  readonly text: string;
-} {
-  let truncated = more || rows.length > ROW_CAP;
-  const candidates = rows.slice(0, ROW_CAP);
-  let size = bytes(JSON.stringify(envelope([], true)));
-  let kept = 0;
-  for (const row of candidates) {
-    const rowSize = bytes(JSON.stringify(row)) + (kept > 0 ? 1 : 0);
-    if (size + rowSize > BYTE_CAP) {
-      truncated = true;
-      break;
-    }
-    size += rowSize;
-    kept += 1;
-  }
-  const fitted = candidates.slice(0, kept);
-  return {
-    rows: fitted,
-    truncated,
-    text: JSON.stringify(envelope(fitted, truncated)),
+  rowCap: number = ROW_CAP,
+): Fitted<T> {
+  const candidates = rows.slice(0, rowCap);
+  const cut = more || rows.length > candidates.length;
+  const render = (kept: number): Fitted<T> => {
+    const fitted = candidates.slice(0, kept);
+    const truncated = cut || kept < candidates.length;
+    return {
+      rows: fitted,
+      truncated,
+      text: JSON.stringify(envelope(fitted, truncated)),
+    };
   };
+  const fits = (result: Fitted<T>): boolean => bytes(result.text) <= BYTE_CAP;
+  const all = render(candidates.length);
+  if (fits(all)) return all;
+  // The size never shrinks as rows are added: a row adds at least 2 bytes, and `false` is only 1 byte
+  // longer than `true`, so the largest number of rows that fits is found by halving.
+  let lo = 0;
+  let hi = candidates.length;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (fits(render(mid))) lo = mid;
+    else hi = mid;
+  }
+  return render(lo);
 }
 
 function parseData(text: string): unknown {
@@ -221,16 +230,31 @@ async function describeLog(log: LogReader): Promise<string> {
       last_time: v.last,
     };
   });
-  const fitted = fitRows(versionList, false, (rows, truncated) => ({
-    fields: FIELDS,
-    events: totals.events,
-    deliveries: totals.deliveries,
-    first_time: totals.first,
-    last_time: totals.last,
-    types: typeList,
-    versions: rows,
-    truncated,
-  }));
+  // The types and the versions are one list of rows for the caps, in the order the result holds them, so
+  // the byte cap covers the whole result and rows are dropped from the end: the oldest versions first,
+  // then the types. Neither is a list of events or deliveries, so only the byte cap applies.
+  type Row =
+    | { readonly type: (typeof typeList)[number] }
+    | { readonly version: (typeof versionList)[number] };
+  const rows: Row[] = [
+    ...typeList.map((type) => ({ type })),
+    ...versionList.map((version) => ({ version })),
+  ];
+  const fitted = fitRows(
+    rows,
+    false,
+    (kept, truncated) => ({
+      fields: FIELDS,
+      events: totals.events,
+      deliveries: totals.deliveries,
+      first_time: totals.first,
+      last_time: totals.last,
+      types: kept.flatMap((row) => ("type" in row ? [row.type] : [])),
+      versions: kept.flatMap((row) => ("version" in row ? [row.version] : [])),
+      truncated,
+    }),
+    Infinity,
+  );
   return fitted.text;
 }
 
@@ -363,8 +387,7 @@ export function makeTools(
   return [
     tool({
       name: "describe_log",
-      description:
-        "Describes the event log: its fields, its event types with their counts and data fields, the number of events and deliveries, the first and last time, and the factory versions present (newest first).",
+      description: `Describes the event log: its fields, its event types with their counts and data fields, the number of events and deliveries, the first and last time, and the factory versions present (newest first). At most ${String(BYTE_CAP)} bytes; "truncated": true means some types or versions were left out.`,
       schema: DescribeInput,
       run: () => describeLog(log),
     }),

@@ -316,6 +316,52 @@ describe("the caps on a tool result", () => {
     expect(result.truncated).toBe(true);
   });
 
+  test("a result that would be one byte over the cap with truncated: false drops its last event instead", async () => {
+    const sized = (note: string) => makeLog([event("f0", { data: { note } })]);
+    const base = await call(sized(""), "find_events", {});
+    const fill = BYTE_CAP + 1 - new TextEncoder().encode(base.text).length;
+    const raw = await call(sized("x".repeat(fill)), "find_events", {});
+    expect(new TextEncoder().encode(raw.text).length).toBeLessThanOrEqual(
+      BYTE_CAP,
+    );
+    const result = Events.parse(JSON.parse(raw.text));
+    expect(result.events).toEqual([]);
+    expect(result.truncated).toBe(true);
+  });
+
+  test(`describe_log holds at most ${String(BYTE_CAP)} bytes, counting its types and their data fields`, async () => {
+    const fields = Object.fromEntries(
+      Array.from({ length: 40 }, (_, i) => [`field_${String(i)}`, i]),
+    );
+    const log = makeLog(
+      Array.from({ length: 200 }, (_, i) =>
+        event(`a${String(i).padStart(3, "0")}`, {
+          type: `test.type.${String(i).padStart(3, "0")}.v1`,
+          data: fields,
+        }),
+      ),
+    );
+    const raw = await call(log, "describe_log", {});
+    expect(raw.isError, raw.text).toBe(false);
+    expect(new TextEncoder().encode(raw.text).length).toBeLessThanOrEqual(
+      BYTE_CAP,
+    );
+    const result = z
+      .object({
+        events: z.number(),
+        types: z.array(z.object({ type: z.string() })),
+        versions: z.array(z.unknown()),
+        truncated: z.boolean(),
+      })
+      .parse(JSON.parse(raw.text));
+    expect(result.events).toBe(200);
+    expect(result.truncated).toBe(true);
+    expect(result.types.length).toBeGreaterThan(0);
+    expect(result.types.length).toBeLessThan(200);
+    expect(result.types[0]?.type).toBe("test.type.000.v1");
+    expect(result.versions).toEqual([]);
+  });
+
   test("a result under both caps says it was not truncated", async () => {
     const log = makeLog([event("e0")]);
     expect(Events.parse(await json(log, "find_events")).truncated).toBe(false);

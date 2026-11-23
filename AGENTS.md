@@ -27,6 +27,8 @@ Read `docs/ARCHITECTURE.md` and `docs/adr/` first; these are the things they do 
 - Unit tests live in `apps/cli/tests`, including those of the core's behaviour: the core's tsconfig covers only `src`, and its tests need `node:sqlite` to run the core's queries.
 - `apps/cli/tests/recordings/*.json` are the recorded cases. A case with `hand_written: false` is refreshed by `make record`; `recorded_at: null` means it has never been recorded from the live model, and its responses were written by hand in the recorded form.
 - The question's timeout is an `AbortSignal.timeout`, whose timer does not keep Node alive; a fake `fetch` that hangs must hold a timer of its own, as `apps/cli/tests/replay.ts` does.
+- `acceptance/ac5-default-timeout.test.ts` waits the real 120 seconds and checks the time with `performance.now()`. If the Mac sleeps during it (on battery, `pmset -g log` shows `Maintenance Sleep` and `DarkWake`), it reports 400 seconds or more and fails, and `caffeinate -i` does not stop that sleep. Rerun it with the Mac awake before suspecting the timeout code.
+- A tool result's byte cap is checked against the exact JSON `fitRows` emits, `truncated` included; `describe_log` passes its types and versions to it as one list, so the cap covers the whole result.
 
 ## The log
 

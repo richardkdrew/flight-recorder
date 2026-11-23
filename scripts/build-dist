@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Builds dist/: a flight that runs on its own, with nothing from this checkout, so it keeps working
+# after the checkout is moved or deleted. make build runs it on the pinned Node.
+#
+#   dist/flight                 the command: runs the CLI below on the Node below
+#   dist/lib/node               a copy of the Node that ran this script (the one in .node-version)
+#   dist/lib/app/               the CLI and its core as source, the synthetic data set, and the
+#                               runtime packages from package-lock.json (no dev packages)
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$root"
+
+dist="$root/dist"
+app="$dist/lib/app"
+
+rm -rf "$dist"
+mkdir -p "$app"
+
+# The Node that runs this script, which make build pins to .node-version through fnm.
+cp "$(node -p process.execPath)" "$dist/lib/node"
+
+# The workspace as Node runs it from source: the same layout, so the URLs the code builds from
+# import.meta.url (the prompt, the data set) resolve inside dist/ too.
+copy() {
+  mkdir -p "$app/$(dirname "$1")"
+  cp -R "$1" "$app/$1"
+}
+copy package.json
+copy package-lock.json
+copy apps/cli/package.json
+copy apps/cli/src
+copy packages/core/package.json
+copy packages/core/src
+copy packages/core/prompts
+copy data/synthetic/events.jsonl
+
+# The locked runtime packages only, from npm's cache when make setup has filled it.
+(cd "$app" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund --prefer-offline --loglevel=error)
+
+cat >"$dist/flight" <<'EOF'
+#!/bin/sh
+# flight, built by make build: runs the CLI on the Node and packages beside this file, so it needs
+# nothing from the checkout it was built in. It follows symlinks, so it can be linked onto the PATH.
+self="$0"
+while [ -L "$self" ]; do
+  link="$(readlink "$self")"
+  case "$link" in
+    /*) self="$link" ;;
+    *) self="$(dirname "$self")/$link" ;;
+  esac
+done
+here="$(cd "$(dirname "$self")" && pwd)"
+exec "$here/lib/node" "$here/lib/app/apps/cli/src/main.ts" "$@"
+EOF
+chmod +x "$dist/flight"

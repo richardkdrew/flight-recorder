@@ -5,7 +5,8 @@ Read `docs/ARCHITECTURE.md` and `docs/adr/` first; these are the things they do 
 ## Running things
 
 - Run everything through `make`: it runs on the Node in `.node-version` (26) through fnm, and the `node` on the PATH may be older.
-  `dist/flight`, from `make build`, does the same and holds this checkout's absolute path, so rebuild it after moving the checkout.
+  `dist/flight`, from `make build` (`scripts/build-dist`), needs nothing from the checkout: `dist/lib/` holds a copy of the pinned Node, the CLI and core as source, the data set and the runtime packages (`npm ci --omit=dev`, from npm's cache when it can).
+  Anything new the CLI reads at run time through `import.meta.url` must be copied there too, or `dist/flight` breaks while `make dev` still works.
 - `make check` never calls a live model. `make record` does: it needs `ANTHROPIC_API_KEY` and spends a little, so run it only when asked.
 - The project's checks run on the owner's Mac; there is no CI workflow.
 - `.npmrc` (`save-exact`, `ignore-scripts`, `engine-strict`, as the spec asks) is not in the repository yet: the engineering agent was not allowed to write it.

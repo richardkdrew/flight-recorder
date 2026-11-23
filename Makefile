@@ -35,15 +35,10 @@ check-audit: $(PACKAGES)
 acceptance:
 	acceptance/run
 
-# What the owner tries: dist/flight, which runs the CLI from this checkout, on the pinned Node when fnm
-# is installed, from whatever folder it is run in.
-DIST_NODE := $(if $(shell command -v fnm 2>/dev/null),fnm exec --using="$(CURDIR)/.node-version" -- node,node)
-
+# What the owner tries: dist/flight, which carries its own Node, source and runtime packages, so it
+# runs from any folder and keeps working after this checkout is moved or deleted.
 build: $(PACKAGES)
-	rm -rf dist
-	mkdir -p dist
-	printf '#!/bin/sh\nexec %s "%s/apps/cli/src/main.ts" "$$@"\n' '$(DIST_NODE)' "$(CURDIR)" > dist/flight
-	chmod +x dist/flight
+	$(NODE_RUN) scripts/build-dist
 
 # Records the replies of the cases that are not hand-written again, from the live model on the synthetic
 # log. It needs ANTHROPIC_API_KEY and spends a little; make check never runs it.

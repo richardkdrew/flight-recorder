@@ -2,7 +2,7 @@
 // and the line it writes about each question.
 
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
@@ -67,6 +67,25 @@ describe("configuration", () => {
     expect(run.code).toBe(1);
     expect(run.stderr).toContain(`no event log at ${dir}`);
   });
+
+  // Root reads through permissions, so the folder would not stop it.
+  test.skipIf(process.getuid?.() === 0)(
+    "a log in a folder the user cannot search exits 1 and says so",
+    async ({ onTestFinished }) => {
+      const dir = join(tempDir(), "locked");
+      mkdirSync(dir);
+      const path = join(dir, "events.db");
+      chmodSync(dir, 0o000);
+      onTestFinished(() => {
+        chmodSync(dir, 0o700);
+      });
+      const run = await flight(["ask", "a question", "--log", path]);
+      expect(run.code).toBe(1);
+      expect(run.stderr).toContain(`${path} is not an event log`);
+      expect(run.stderr).toContain("EACCES");
+      expect(run.sent).toHaveLength(0);
+    },
+  );
 });
 
 describe("output", () => {

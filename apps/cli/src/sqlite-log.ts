@@ -17,7 +17,17 @@ export type OpenFailure =
 /** Opens the log at `path` without ever creating or changing it. */
 export function openLog(path: string): Result<OpenLog, OpenFailure> {
   // Checked first, because SQLite would create a missing file.
-  if (!statSync(path, { throwIfNoEntry: false })?.isFile()) {
+  let isFile: boolean;
+  try {
+    isFile = statSync(path, { throwIfNoEntry: false })?.isFile() ?? false;
+  } catch (error) {
+    // Errors other than a missing path, such as EACCES on a folder above it.
+    return {
+      ok: false,
+      error: { kind: "unreadable", message: messageOf(error) },
+    };
+  }
+  if (!isFile) {
     return { ok: false, error: { kind: "missing" } };
   }
   let db: DatabaseSync;

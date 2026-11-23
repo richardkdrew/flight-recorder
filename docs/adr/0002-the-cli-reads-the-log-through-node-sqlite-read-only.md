@@ -24,6 +24,8 @@ Only `flight seed` opens a database for writing, and only a file that does not e
 
 - No native dependency, and nothing to rebuild in `make setup`.
 - The CLI depends on the stability of `node:sqlite` in the pinned Node version.
+  Checked on Node 26.13.1 at the build of `flight ask`: it loads with no experimental warning, and a read-only connection opens a WAL log that orc left with no `-wal` or `-shm` file and reads it cleanly.
+- Reading such a log leaves an empty `-wal` file and a `-shm` file beside it, which a read-only connection cannot remove; the log's own bytes stay identical, and orc uses or removes the two files the next time it opens the log.
 
 ## What enforces it
 

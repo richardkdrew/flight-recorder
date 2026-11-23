@@ -74,13 +74,16 @@ It is a real agent, not a fixed prompt: for each question the model chooses whic
 - Every tool returns at most a set number of rows, and every question has a cap on model calls and a timeout, and says so plainly when it hits one.
 - Its final reply is JSON parsed with a schema: an answer with the ids it cites, or "not enough data yet" with what it would need.
 - It runs on the Anthropic TypeScript SDK's tool runner, which works the same in Node and in Cloudflare Workers.
+  The runtime passes the runner into the core, which steps it one model call at a time, so the core counts the calls, applies the timeout and records which ids each tool returned.
+  The core does not import the SDK itself, because the SDK's types bring in Node's (ADR 0001).
 - The CLI uses `claude-sonnet-5-5`.
 
 ## Parts
 
 - **`packages/core`:** the agent: its tools, its prompts (as files), the citation check, the "not enough data" rule and the limits.
-  It reaches data only through a small interface for read-only queries, so it never knows whether the data is a local SQLite file or D1.
-- **`apps/cli`:** the `flight` command (`flight ask`, `flight seed`), over a read-only `node:sqlite` connection (ADR 0002).
+  It reaches data only through a small interface for read-only queries, so it never knows whether the data is a local SQLite file or D1, and the model only through a tool runner the runtime passes in.
+  The queries are the core's own fixed SQL, which runs on SQLite and on D1 alike.
+- **`apps/cli`:** the `flight` command (`flight ask`, `flight seed`), over a read-only `node:sqlite` connection (ADR 0002) and the Anthropic SDK's tool runner.
 - **`data/synthetic/events.jsonl`:** the synthetic data set, one event per line in the format of orc's own export; `flight seed <file>` writes it into a new log.
 
 The packages are one npm workspace, used as source with no build step (ADR 0001).
@@ -110,7 +113,8 @@ The repository follows the owner's `AGENT-APPS.md` and `TYPESCRIPT.md` standards
   They use recorded replies to check the tools, the citation check, the "not enough data" rule, the limits, the schema for replies, and the injection guards.
 - `make eval` (from a later change) runs the live model against the published data set and prints a score for each kind of case beside the last run's: known answers, questions it should decline, citations that must match rows, and injection attempts.
   It never blocks a change.
-- `make record` records the replies the tests use again, and notes the model they came from.
+- `make record` records the replies the tests use again, and notes the model they came from and when.
+  The cases that test the citation check, the cap on calls, the timeout, the reply's schema and the injection guards are written by hand and never re-recorded.
 
 ## The published data set
 

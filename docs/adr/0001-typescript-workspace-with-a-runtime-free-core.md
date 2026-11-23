@@ -27,7 +27,10 @@ Packages are used as source, with no build step; Node 26 runs the CLI's `.ts` fi
 - The Worker can import `@flight/core` unchanged.
 - The core cannot read its prompt file itself; the entry point reads it and passes it in.
 - Node's type stripping needs `.ts` extensions in the CLI's relative imports.
+- The core does not import the Anthropic SDK: the SDK's types import `undici-types`, which brings in `@types/node`, so with the SDK in the core `process` and every `node:` module type-check there despite `types: []`.
+  The core takes a `ModelRunner` instead, which is the shape of the SDK's `client.beta.messages.toolRunner`, and builds its tools as plain runnable-tool objects; `apps/cli` creates the client and passes the runner in, and the Worker will do the same.
 
 ## What enforces it
 
 `tsc --noEmit -p packages/core` in `make check`, with `types: []` in the core's tsconfig.
+It holds only while nothing the core imports brings in Node's types, so a test in `apps/cli/tests/core-imports.test.ts` fails when the core imports anything but its own files and `zod`.

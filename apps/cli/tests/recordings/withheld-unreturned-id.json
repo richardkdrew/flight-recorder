@@ -1,0 +1,42 @@
+{
+  "about": "An answer citing an event that is in the log but that no tool returned during the question is withheld.",
+  "model": "claude-sonnet-5-5",
+  "question": "How did station-search go?",
+  "hand_written": true,
+  "recorded_at": null,
+  "outcome": "withheld",
+  "responses": [
+    {
+      "id": "msg_withheld_1",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5-5",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_withheld_1",
+          "name": "read_delivery",
+          "input": { "delivery": "2282ede0698af1191985f36a7c1a30e6" }
+        }
+      ],
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": { "input_tokens": 2100, "output_tokens": 50 }
+    },
+    {
+      "id": "msg_withheld_2",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5-5",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"kind\":\"answer\",\"text\":\"WITHHELD-TEXT: station-search was accepted, like dark-mode.\",\"cites\":[\"2282ede0698af1191985f36a7c1a30e6\",\"ca8f0134badedce13d5029c246066cdd\"]}"
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": { "input_tokens": 4800, "output_tokens": 70 }
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "about": "A question the synthetic log cannot support: three deliveries per version are too few to compare them.",
+  "model": "claude-sonnet-5-5",
+  "question": "Did the newer factory version cut review rounds?",
+  "hand_written": false,
+  "recorded_at": null,
+  "outcome": "not_enough_data",
+  "responses": [
+    {
+      "id": "msg_synthetic_versions_1",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5-5",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_synthetic_versions_1",
+          "name": "describe_log",
+          "input": {}
+        }
+      ],
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": { "input_tokens": 2100, "output_tokens": 40 }
+    },
+    {
+      "id": "msg_synthetic_versions_2",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5-5",
+      "content": [
+        {
+          "type": "tool_use",
+          "id": "toolu_synthetic_versions_2",
+          "name": "list_deliveries",
+          "input": {}
+        }
+      ],
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": { "input_tokens": 3400, "output_tokens": 40 }
+    },
+    {
+      "id": "msg_synthetic_versions_3",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5-5",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"kind\":\"not_enough_data\",\"needs\":\"at least 5 accepted deliveries from each factory version, so review rounds per change can be compared\"}"
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": { "input_tokens": 4300, "output_tokens": 50 }
+    }
+  ]
+}

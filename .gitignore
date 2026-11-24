@@ -1,0 +1,7 @@
+node_modules/
+dist/
+# Logs written by `flight seed` or by trying the CLI; the data set itself is data/synthetic/events.jsonl.
+*.db
+*.db-wal
+*.db-shm
+*.db-journal

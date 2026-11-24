@@ -1,0 +1,43 @@
+{
+  "about": "A question the synthetic log answers: the model finds the friction notes and cites each one.",
+  "model": "claude-sonnet-5-5",
+  "question": "What friction has the owner noted so far?",
+  "hand_written": false,
+  "recorded_at": null,
+  "outcome": "answer",
+  "responses": [
+    {
+      "id": "msg_synthetic_friction_1",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5-5",
+      "content": [
+        { "type": "text", "text": "I'll look for friction notes in the log." },
+        {
+          "type": "tool_use",
+          "id": "toolu_synthetic_friction_1",
+          "name": "find_events",
+          "input": { "type": "orc.friction.noted.v1" }
+        }
+      ],
+      "stop_reason": "tool_use",
+      "stop_sequence": null,
+      "usage": { "input_tokens": 2100, "output_tokens": 64 }
+    },
+    {
+      "id": "msg_synthetic_friction_2",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5-5",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"kind\":\"answer\",\"text\":\"The owner has noted friction 3 times: a build agent that retried the same failing import test three times before escalating (paper-lantern), a dependency escalation that waited overnight unseen (tide-tables), and spec review comments that arrived after the spec was approved.\",\"cites\":[\"f9ff6b379a7ad13c5abf91888aae3160\",\"2b00fbfddd465d1e8b9d3f19445dc37e\",\"6e92651aa7daee50ce0f553c5c3b4976\"]}"
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": { "input_tokens": 2600, "output_tokens": 120 }
+    }
+  ]
+}

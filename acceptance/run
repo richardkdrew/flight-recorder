@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Builds and runs the acceptance tests, printing each test's name and whether it passed.
+# The packages are used as source, so "building" is installing them when they are missing or stale.
+set -euo pipefail
+
+here="$(cd "$(dirname "$0")" && pwd)"
+root="$(dirname "$here")"
+cd "$root"
+
+# The pinned Node from .node-version, through fnm when it is installed.
+run=()
+if command -v fnm >/dev/null 2>&1 && [ -f .node-version ]; then
+  run=(fnm exec --using=.node-version --)
+fi
+
+if [ ! -f node_modules/.package-lock.json ] || [ package-lock.json -nt node_modules/.package-lock.json ]; then
+  echo "acceptance: installing packages (npm ci)"
+  ${run[@]+"${run[@]}"} npm ci --ignore-scripts --no-audit --no-fund
+fi
+
+# Each test has 90 seconds unless it sets its own limit; none waits more than 200 seconds.
+exec ${run[@]+"${run[@]}"} node --test --test-reporter=spec --test-timeout=90000 "$here"/*.test.ts

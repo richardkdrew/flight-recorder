@@ -33,19 +33,21 @@ CREATE TABLE events (
 
 | Type | `data` fields |
 |---|---|
-| `orc.agent.finished.v1` | agent, harness, model, models, effort, brief (a hash of the agent's instructions), seconds, outcome, input_tokens, cached_tokens, output_tokens, cost_usd |
-| `orc.command.finished.v1` | command, seconds, outcome |
+| `orc.agent.finished.v1` | agent, harness, model, models, effort, brief (a hash of the agent's instructions), seconds, outcome (`succeeded`, `failed`, `timed out`), input_tokens, cached_tokens, output_tokens, cost_usd |
+| `orc.command.finished.v1` | command, seconds, outcome (`succeeded`, `stopped`) |
 | `orc.checks.recorded.v1` | commit, where (CI or the owner's Mac), passed, failed |
-| `orc.review.recorded.v1` | kind (spec or code), commit, verdict, blocking, should_fix, observation (counts) |
-| `orc.run.escalated.v1` | kind (the rule, or the attempts or rounds that ran out), count, commit |
-| `orc.owner.decided.v1` | decision, questions, despite_review, commit, reviewed_commit, version |
-| `orc.owner.judged.v1` | verdict, commit; only in older deliveries, before accepting a preview replaced judging after the merge |
+| `orc.review.recorded.v1` | kind (spec or code), commit, verdict (`pass`, `changes_requested`), blocking, should_fix, observation (counts) |
+| `orc.run.escalated.v1` | kind (`build attempts`, `rules`, `review rounds`, `frozen tests`), count, commit |
+| `orc.owner.decided.v1` | decision (`approved`, `answered`, `reopened`, `allowed`, `allowed past review`, `sent back`, `corrected tests`, `accepted`, `released`; and `merged`, from changes merged before orc had an accept step), questions, despite_review, commit, reviewed_commit, version |
+| `orc.owner.judged.v1` | verdict (`works`, `problems`), commit; only in older deliveries, before accepting a preview replaced judging after the merge |
 | `orc.deploy.finished.v1` | environment, commit, outcome, seconds |
 | `orc.problem.reported.v1` | issue: a problem found after the merge |
 | `orc.eval.finished.v1` | suite, cases, passed, harness, model, effort |
-| `orc.friction.noted.v1` | note: free text, and the only free text in the log |
+| `orc.friction.noted.v1` | note: free text, and the only free text in the log; never a delivery, and sometimes no project |
 
 Event ids and delivery ids are 32-character hex strings, and orc keeps the file in WAL mode, with indexes on `(project, change)` and on `type`.
+A change is accepted when its delivery has a decision `accepted`; `merged` does not count, and a rule stop is an escalation of kind `rules`.
+The synthetic data set uses these same values.
 The log holds no prompts, code, replies or review text.
 Review findings, escalations and the owner's decisions in words live on each change's pull request, as comments.
 The time from one command ending to the next starting is time the change waited on the owner, since nothing runs between two commands.

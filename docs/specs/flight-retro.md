@@ -26,7 +26,7 @@ criteria:
     text: "With 2 or more changes covered, `flight retro` sends exactly one request to the model, offering no tools; when the reply passes the citation check, the output ends with `## Causes that repeat`, listing only the causes whose cited ids belong to at least 2 covered changes, each followed by `(<n> changes, <m> events)` as the code counts them from its cited ids (a friction note counting for the change it is printed under, a delivery id for its own change) and by every id it cites, ordered by n and then m, largest first; then `## What went well`, each item with the ids it cites; and it exits 0."
   - id: AC13
     kind: new
-    text: "When a cause or a went-well item cites nothing or cites an id that is not an event id or delivery id in the data the retro sent, when the reply is not in the expected form, or when no reply arrives within the timeout (120 seconds by default), the change sections are still printed but neither `## Causes that repeat` nor `## What went well` is; stderr says `causes withheld: <ids>` (or `causes withheld: it cited nothing`), `stopped: the model's reply was not in the expected form`, or `stopped: no answer within <s> seconds`; and it exits 1."
+    text: "When a cause or a went-well item cites nothing or cites an id that is not an event id or delivery id in the data the retro sent, when the reply is not in the expected form, when no reply arrives within the timeout (120 seconds by default), or when the JSON inside `<retro>` (the covered changes' events and the friction notes in the range) would be more than 200,000 bytes, in which case no request is sent to the model, the change sections are still printed but neither `## Causes that repeat` nor `## What went well` is; stderr says `causes withheld: <ids>` (or `causes withheld: it cited nothing`), `stopped: the model's reply was not in the expected form`, `stopped: no answer within <s> seconds`, or `stopped: the retro's data is <n> KB, over the 200 KB limit for one request; choose a later --since`, with n the data's size in bytes divided by 1,000 and rounded up; and it exits 1."
   - id: AC14
     kind: new
     text: "With fewer than 2 changes covered, `flight retro` sends no request to the model, prints the sections it has and `not enough data yet: causes need at least 2 accepted changes, and this range has <n>`, and exits 0; when the model's reply says the data cannot support causes, it prints `not enough data yet: ` followed by what the reply says it would need, and exits 0."
@@ -64,7 +64,7 @@ The synthetic data set changes to the values orc's real log holds, so `flight se
 **Shape** (ADR 0004).
 The change sections are facts the code builds from fixed queries; the model writes only the causes and what went well, in one call with no tools, over the events those sections were built from.
 This is lighter than running the `ask` agent loop: the retro already knows which events it needs, so the model has nothing to look up, the request is one bounded call, and the sections stay exact whatever the model does.
-It follows `AGENT-APPS.md` sections 1, 3 and 6 (every cited id checked, the data inside delimiters, a reply parsed with a schema, a timeout and an output cap) and departs from `docs/ARCHITECTURE.md`'s "the model chooses which queries to run" for the retro only, as ADR 0004 records.
+It follows `AGENT-APPS.md` sections 1, 3 and 6 (every cited id checked, the data inside delimiters, a reply parsed with a schema, a timeout, an output cap and a cap on the data sent) and departs from `docs/ARCHITECTURE.md`'s "the model chooses which queries to run" for the retro only, as ADR 0004 records.
 
 **The values** are those orc's real log holds, now listed in `docs/ARCHITECTURE.md`'s table of event types.
 A change is accepted when its delivery has an `orc.owner.decided.v1` with decision `accepted`.
@@ -110,13 +110,16 @@ The model is `MODEL` (`claude-sonnet-5-5`), with the existing limits: 120 second
 The prompt is a new file, `packages/core/prompts/retro.md`, read by the CLI and hashed like `ask.md`; `scripts/build-dist` already copies the whole prompts folder.
 The prompt names the values above, so the model reads `rules`, `build attempts` and `timed out` as the stops they are.
 The user message holds, inside `<retro>` delimiters and after a line saying it is data, one JSON object: each covered change (delivery id, change, project as its last segment, accepted time, and all its events in the tools' event shape) and the friction notes in the range, each with the delivery it is printed under or `null`.
+**The data cap** (AC13): that object, serialised with `JSON.stringify` and no spacing, may be at most 200,000 bytes of UTF-8, a constant `RETRO_DATA_LIMIT_BYTES` in the core beside the other limits.
+The core builds the object and measures it before any request; when it is larger, the retro sends nothing, returns the change sections' facts in its error, and the CLI prints them, then `stopped: the retro's data is <n> KB, over the 200 KB limit for one request; choose a later --since` (n = bytes ÷ 1,000, rounded up), and exits 1, with no record line, since no model call was made.
+The cap applies with or without `--since`, and only when a request would be sent (2 or more changes covered).
 The prompt asks for causes that repeat across at least 2 changes and what went well, citing every event each rests on, with no counts in the text, since the code adds them.
 The reply is one JSON object parsed with Zod, rejected and never repaired when it does not fit: `{"kind":"retro","causes":[{"text":"…","cites":["<id>",…]}],"went_well":[{"text":"…","cites":[…]}]}`, at most 5 of each, or `{"kind":"not_enough_data","needs":"…"}`.
 The citation check: every cited id must be an event id or a delivery id in the data sent, and every cause and item must cite at least one; one failure withholds both sections.
 The code counts each cause: n is the number of covered changes its cited ids belong to, m the number of distinct event ids it cites; causes with n below 2 are dropped, and if none is left the section says `No cause repeats across these changes.`.
 Each cause is printed as a numbered item: its text, `(<n> changes, <m> events)`, and its ids in backticks.
 
-**Output and exit codes**, as `flight ask` does them: the Markdown on stdout; `causes withheld:`, `stopped:` and errors on stderr, the change sections still on stdout; the one record line on stderr after a model call (model, prompt hash, calls, tokens, seconds, `tools=none`, outcome); 0 for a retro or "not enough data yet", 1 for an expected failure (no log, no API key, withheld, timeout, bad reply, model error), 2 for a usage error, 130 for Ctrl-C.
+**Output and exit codes**, as `flight ask` does them: the Markdown on stdout; `causes withheld:`, `stopped:` and errors on stderr, the change sections still on stdout; the one record line on stderr after a model call (model, prompt hash, calls, tokens, seconds, `tools=none`, outcome); 0 for a retro or "not enough data yet", 1 for an expected failure (no log, no API key, withheld, timeout, bad reply, model error, data over the cap), 2 for a usage error, 130 for Ctrl-C.
 The API key is checked as `ask` checks it, before anything is printed.
 
 **The synthetic data set** (AC16, AC17): `data/synthetic/events.jsonl` keeps every event and id it has, with these values changed:
@@ -138,6 +141,7 @@ No new dependency and no change to any manifest or lock file.
 - `runCli(["retro", "--log", path], deps)` and `runCli(["retro", "--since", "2026-11-01", "--log", path], deps)` from `apps/cli/src/cli.ts`, with `deps.fetch` a replay of hand-written recordings (one response body, or `{"hang": true}`) and `deps.limits` for a short timeout; the replay keeps each request body, so a test can check there was one request, with no tools and no full path.
 - `retro(deps, options)` and `renderRetro(result)` from `@flight/core`.
 - The acceptance tests build their own small logs through `node:sqlite` with the schema in `docs/ARCHITECTURE.md`, as the flight-ask tests do; AC17 seeds one with `flight seed` and answers the one model request with a hand-written `not_enough_data` reply.
+- AC13's cap is tested with two small logs of 2 accepted changes built the same way: one whose friction notes make the `<retro>` JSON just over 200,000 bytes, checking the replay received no request, the change sections are on stdout, the `stopped:` line with its `<n> KB` is on stderr and the exit code is 1; and one just under, checking exactly one request is sent and its `<retro>` JSON is at most 200,000 bytes.
 - AC16 reads `data/synthetic/events.jsonl` directly, and compares it with a list, kept in the test, of the 78 events' ids, types, times, projects, changes and deliveries as the file holds them before this change.
 
 ## Out of scope
@@ -153,7 +157,9 @@ No new dependency and no change to any manifest or lock file.
 - A retro's causes and what went well are written by the model (Q2); the change sections never depend on it.
 - The model gets no tools in a retro and one call, since the code has already chosen its data; ADR 0004 records this and the data it sends.
 - What leaves the Mac is the same kind of data ADR 0003 accepted, the covered changes' events and the friction notes in the range, with projects as their last segment; ADR 0004 supersedes 0003's "the tool results of that question" to cover it.
-- `--since` with more than 20 accepted changes covers the 20 most recent, which bounds the request at roughly 50,000 input tokens.
+- `--since` with more than 20 accepted changes covers the 20 most recent; that limits how many changes a retro lists, while the request itself is bounded by the 200,000-byte data cap (AC13), at roughly 50,000 to 70,000 input tokens plus the prompt, since JSON with hex ids runs at about 3 to 4 bytes a token (an estimate I could not check against the tokenizer).
+- The cap's KB are 1,000 bytes, to match the 200,000-byte limit, and the size is measured on the serialised object alone, without the delimiters or the line before them.
+- ADR 0004 names the 20-change limit as the request's bound; the data cap tightens that bound without changing the decision it records, so it gets no new ADR.
 - A stop is whatever came before each answer of yours; review rounds that asked for changes and failed checks are counted, not listed, since the factory goes on without you.
 - Build attempts are counted as engineering agent runs, which includes runs after a send-back.
 - Escalations of kind `frozen tests`, `review rounds` and `build attempts` are shown as stops in the table but not counted as rule stops; only kind `rules` is.

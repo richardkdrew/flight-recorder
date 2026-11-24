@@ -77,13 +77,14 @@ It is a real agent, not a fixed prompt: for each question the model chooses whic
   The runtime passes the runner into the core, which steps it one model call at a time, so the core counts the calls, applies the timeout and records which ids each tool returned.
   The core does not import the SDK itself, because the SDK's types bring in Node's (ADR 0001).
 - The CLI uses `claude-sonnet-5-5`.
+- A retro is the exception (ADR 0004): the code builds each change's section from fixed queries, and the model, in one call with no tools, writes only the causes that repeat and what went well over the events the code chose; the core checks their citations and counts them.
 
 ## Parts
 
 - **`packages/core`:** the agent: its tools, its prompts (as files), the citation check, the "not enough data" rule and the limits.
   It reaches data only through a small interface for read-only queries, so it never knows whether the data is a local SQLite file or D1, and the model only through a tool runner the runtime passes in.
   The queries are the core's own fixed SQL, which runs on SQLite and on D1 alike.
-- **`apps/cli`:** the `flight` command (`flight ask`, `flight seed`), over a read-only `node:sqlite` connection (ADR 0002) and the Anthropic SDK's tool runner.
+- **`apps/cli`:** the `flight` command (`flight ask`, `flight retro`, `flight seed`), over a read-only `node:sqlite` connection (ADR 0002) and the Anthropic SDK's tool runner.
 - **`data/synthetic/events.jsonl`:** the synthetic data set, one event per line in the format of orc's own export; `flight seed <file>` writes it into a new log.
 
 The packages are one npm workspace, used as source with no build step (ADR 0001).
@@ -98,12 +99,12 @@ The repository follows the owner's `AGENT-APPS.md` and `TYPESCRIPT.md` standards
 - **Read-only.** Flight Recorder never writes to the event log or the factory.
   A proposal is something the owner reads and acts on, and the owner merges every factory change.
 - **Grounded.** Every claim cites event ids or delivery ids, with counts.
-  The core checks every citation before an answer is shown: each cited id exists and came from a tool in that same answer.
+  The core checks every citation before an answer is shown: each cited id exists and came from a tool in that same answer, or, in a retro, from the data the core sent.
   When the data is too thin, it says "not enough data yet" and what it would need.
 - **Untrusted text.** Friction notes, change names, a visitor's question and the model's own replies are data, never instructions.
 - **Versions are compared, not guessed.** Every event names the factory version that produced it, and that is how Flight Recorder measures whether a factory change helped.
 - **Private stays private.** The live log names folders on the owner's Mac and holds free-text notes, so the live log is never published, and only what a question needs goes to the model provider (ADR 0003).
-  Tool results give each project as the last segment of its folder path, never the full path; friction notes are sent as they are.
+  Tool results and a retro's data give each project as the last segment of its folder path, never the full path; friction notes are sent as they are.
   Only the published data set reaches the site or this repository.
 - **Spending is capped in code.** Every model call has a timeout and an output cap; from the live change on, a daily spending cap is checked before each call.
 
@@ -164,7 +165,7 @@ It deploys from its own repository through GitHub Actions, as the factory's depl
 ## The changes, in order
 
 1. **`flight ask`:** grounded answers over the factory's log, read-only, or another log with `--log`, with the synthetic data set and `flight seed`, and the core as its own package.
-2. **`flight retro`:** a retro over the deliveries since the last one, including the friction notes, every 5 accepted changes.
+2. **`flight retro`:** a retro over the last 5 accepted changes, or those since a date, including the friction notes; it keeps no record of its own.
 3. **Proposals:** one per retro, opened as a GitHub issue on the factory repository from the CLI; its effect is reported after the next 5 changes.
 4. **The curated export** of Flight Recorder's own deliveries, which the owner approves.
 5. **The site:** the concept pages, the stories and the timeline, static, on Cloudflare, on the exported data.

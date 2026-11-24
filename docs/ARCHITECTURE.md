@@ -40,7 +40,7 @@ CREATE TABLE events (
 | `orc.run.escalated.v1` | kind (`build attempts`, `rules`, `review rounds`, `frozen tests`), count, commit |
 | `orc.owner.decided.v1` | decision (`approved`, `answered`, `reopened`, `allowed`, `allowed past review`, `sent back`, `corrected tests`, `accepted`, `released`; and `merged`, from changes merged before orc had an accept step), questions, despite_review, commit, reviewed_commit, version |
 | `orc.owner.judged.v1` | verdict (`works`, `problems`), commit; only in older deliveries, before accepting a preview replaced judging after the merge |
-| `orc.deploy.finished.v1` | environment, commit, outcome, seconds |
+| `orc.deploy.finished.v1` | environment, commit, outcome (`succeeded`, `failed`), seconds |
 | `orc.problem.reported.v1` | issue: a problem found after the merge |
 | `orc.eval.finished.v1` | suite, cases, passed, harness, model, effort |
 | `orc.friction.noted.v1` | note: free text, and the only free text in the log; never a delivery, and sometimes no project |

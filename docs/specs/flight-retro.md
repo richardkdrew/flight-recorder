@@ -35,7 +35,7 @@ criteria:
     text: "`flight ask \"<question>\" --since 2026-01-01` and `flight seed <file> --since 2026-01-01` still exit 2 with a usage error, send no request to the model and create no file."
   - id: AC16
     kind: new
-    text: "In `data/synthetic/events.jsonl`, every `orc.owner.decided.v1` decision is one of `approved`, `answered`, `reopened`, `allowed`, `allowed past review`, `sent back`, `corrected tests`, `accepted`, `released` or `merged`; every `orc.owner.judged.v1` verdict is `works` or `problems`; every `orc.run.escalated.v1` kind is `build attempts`, `rules`, `review rounds` or `frozen tests`; every `orc.agent.finished.v1` outcome is `succeeded`, `failed` or `timed out`; every `orc.command.finished.v1` outcome is `succeeded` or `stopped`; every `orc.review.recorded.v1` verdict is `pass` or `changes_requested`; no `orc.friction.noted.v1` has a delivery; and every event id the file held before this change is still in it with the same type, time, project, change and delivery."
+    text: "In `data/synthetic/events.jsonl`, every `orc.owner.decided.v1` decision is one of `approved`, `answered`, `reopened`, `allowed`, `allowed past review`, `sent back`, `corrected tests`, `accepted`, `released` or `merged`; every `orc.owner.judged.v1` verdict is `works` or `problems`; every `orc.run.escalated.v1` kind is `build attempts`, `rules`, `review rounds` or `frozen tests`; every `orc.agent.finished.v1` outcome is `succeeded`, `failed` or `timed out`; every `orc.command.finished.v1` outcome is `succeeded` or `stopped`; every `orc.deploy.finished.v1` outcome is `succeeded` or `failed`; every `orc.review.recorded.v1` verdict is `pass` or `changes_requested`; no `orc.friction.noted.v1` has a delivery; and every event id the file held before this change is still in it with the same type, time, project, change and delivery."
   - id: AC17
     kind: new
     text: "After `flight seed <file>`, `flight retro --log <file>` prints sections for exactly `reading-stats (paper-lantern)`, `tide-alerts (tide-tables)` and `dark-mode (paper-lantern)`, in that order, and none for `station-search`, `import-bookmarks` or `offline-cache`; tide-alerts' table has the row Stop `escalated: rules (1)`, Event `da640d83103eb43bedc8dd972aa6cdca`, Your answer `allowed`, Event `3db783e8a6f63e9271adb1a7a539c903`, Waited `18 h 39 min`, its counts line has `rule stops: 1`, the note `2b00fbfddd465d1e8b9d3f19445dc37e` is listed under it, and the note `6e92651aa7daee50ce0f553c5c3b4976` is under `## Other friction notes`."
@@ -124,11 +124,10 @@ The API key is checked as `ask` checks it, before anything is printed.
 - decisions `approve` → `approved`, `send_back` → `sent back`, `allow` → `allowed`, `accept` → `accepted`;
 - verdicts of `orc.owner.judged.v1` `accepted` → `works` (station-search, import-bookmarks) and `sent_back` → `problems` (offline-cache);
 - escalation kinds `attempts` → `build attempts`, `dependency` → `rules`;
-- agent outcomes `ok` → `succeeded`; command outcomes `ok` → `succeeded`, `escalated` → `stopped`;
+- agent outcomes `ok` → `succeeded`; command outcomes `ok` → `succeeded`, `escalated` → `stopped`; deploy outcomes `ok` → `succeeded`;
 - review verdicts `approve` → `pass`, `changes` → `changes_requested`.
 
 The three older deliveries (station-search, import-bookmarks, offline-cache), which were judged after their merge, each gain one `orc.owner.decided.v1` with decision `merged`, a new 32-character hex id, the fields the other decisions have (`version` `"1"`, their last commit), placed between their last command and their verdict, so the file stays in time order.
-Deploy outcomes stay `ok`.
 `flight ask`'s code and prompt do not change; its tests compute what they expect from the file, and its recorded cases cite ids that stay.
 
 **Code**: `retro(deps, { since? })` in `packages/core/src/retro.ts`, returning a `Result` whose value and error both carry the change sections' facts; `renderRetro` in the core turns them into Markdown, so the site can reuse both; `runCli` gains `retro` and a `--since` option that only `retro` accepts.
@@ -148,7 +147,6 @@ No new dependency and no change to any manifest or lock file.
 - Post-merge problems (`orc.problem.reported.v1`), costs, and comparing factory versions in the change sections; the model still sees those events and may cite them.
 - `--json`, `--until`, a count other than 5, and flags to change the limits.
 - Any change to `flight ask`'s code or prompt.
-- Deploy outcomes in the synthetic data set.
 
 ## Assumptions
 
@@ -162,7 +160,7 @@ No new dependency and no change to any manifest or lock file.
 - Timeouts are counted from agents only, since a command's outcome is never `timed out`.
 - `answered`, `reopened`, `allowed past review`, `corrected tests` and `released` are rows like any other decision; a change's accepted time is its latest `accepted`, so a `released` after it is still a row.
 - The real log's older deliveries record `merged` and then a judged verdict; I could not see the real log, so the synthetic data's added `merged` events follow that order as assumed.
-- The owner did not list deploy outcomes, so `ok` stays in the synthetic data.
+- Deploy outcomes are `succeeded` and `failed`, as the owner confirmed; the synthetic data's six deploys all become `succeeded`, and the flight-ask acceptance fixture's own `ok` deploy is test data the change leaves as it is.
 - With the new values the seeded log has 3 accepted changes, so `flight retro` on it makes one model call; the note about import-bookmarks (`f9ff…`) falls before the range and is not printed.
 - Times in the table are UTC dates; Waited is rounded down to whole minutes.
 

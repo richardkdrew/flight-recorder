@@ -23,6 +23,16 @@ Read `docs/ARCHITECTURE.md` and `docs/adr/` first; these are the things they do 
 - Only `apps/cli/src/main.ts` and `apps/cli/src/config.ts` may read `process.env` or the clock (eslint).
   A script entry point such as `apps/cli/tests/record.ts` gets them from `config.ts` (`processEnv`, `now`, `clock`).
 
+## The retro
+
+- `retro()` (`packages/core/src/retro.ts`) returns the change sections' facts on both sides of its `Result`, and `renderRetro()` (`retro-markdown.ts`) prints them either way; the CLI adds only the stderr lines.
+  Keep any new field the site will need on the facts, not in the Markdown.
+- A decision is read with `CASE WHEN json_valid(data) THEN json_extract(...) END`, not `json_valid(...) AND json_extract(...)`: SQLite does not promise to short-circuit `AND`, and `json_extract` throws on malformed JSON.
+- The queries return `julianday(time)` as `jd`, and the code works in whole milliseconds, `Math.round(jd * 86_400_000)`, since flooring a difference of floating days can land a minute short.
+- The `<retro>` data cap is measured on `JSON.stringify(data)` before `</` is escaped as `<\/` for the delimiter, which is the size the acceptance tests measure (they parse the JSON back and stringify it again).
+- `flight ask`'s code was out of scope for this change, so `ask.ts` still has its own copies of the prompt hash and the reply's text, which the retro takes from `prompt.ts` and `model.ts`.
+- `data/synthetic/events.jsonl` now has 81 events: the 78 that `acceptance/fixtures/synthetic-before.ts` lists, and the three `merged` decisions of the older deliveries.
+
 ## Tests
 
 - Unit tests live in `apps/cli/tests`, including those of the core's behaviour: the core's tsconfig covers only `src`, and its tests need `node:sqlite` to run the core's queries.

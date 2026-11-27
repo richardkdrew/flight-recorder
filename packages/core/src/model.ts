@@ -59,6 +59,20 @@ export const ModelReply = z.object({
 
 export type ModelReply = z.infer<typeof ModelReply>;
 
+/** The text of a reply's text blocks, joined and trimmed. */
+export function replyText(message: ModelReply): string {
+  return message.content
+    .flatMap((block) =>
+      block.type === "text" && block.text !== undefined ? [block.text] : [],
+    )
+    .join("")
+    .trim();
+}
+
+export function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /** A tool for a tool runner whose input is parsed with `schema`. */
 export function tool<S extends z.ZodObject>(options: {
   readonly name: string;

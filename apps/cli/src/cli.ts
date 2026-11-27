@@ -7,9 +7,17 @@ import { parseArgs } from "node:util";
 import {
   ask,
   ASK_PROMPT_URL,
+  isDay,
+  renderRetro,
+  retro,
+  RETRO_DATA_LIMIT_BYTES,
+  RETRO_PROMPT_URL,
   type AskFailure,
   type AskRecord,
   type LimitOverrides,
+  type LogReader,
+  type RetroFailure,
+  type RetroRecord,
 } from "@flight/core";
 
 import { clock, loadConfig } from "./config.ts";
@@ -33,10 +41,13 @@ export interface CliDeps {
 }
 
 const USAGE = `usage: flight ask "<question>" [--log <file>]
+       flight retro [--since <YYYY-MM-DD>] [--log <file>]
        flight seed <file>
 
   ask    answers a question about the factory's deliveries from its event log, which it only reads:
          by default $XDG_STATE_HOME/orc/events.db, or ~/.local/state/orc/events.db
+  retro  prints a Markdown retro of the last 5 accepted changes, or of those accepted since a day
+         in UTC (at most the 20 most recent), from the same log, which it only reads
   seed   writes the synthetic data set into a new log at <file>
 `;
 
@@ -64,6 +75,7 @@ export async function runCli(
       strict: true,
       options: {
         log: { type: "string" },
+        since: { type: "string" },
         help: { type: "boolean", short: "h" },
       },
     });
@@ -78,6 +90,24 @@ export async function runCli(
   if (values.help) {
     deps.stdout.write(USAGE);
     return 0;
+  }
+  if (command !== "retro" && values.since !== undefined) {
+    return usageError(deps, "only retro takes --since");
+  }
+  if (command === "retro") {
+    if (rest.length > 0) {
+      return usageError(
+        deps,
+        "retro takes no arguments: flight retro [--since <YYYY-MM-DD>]",
+      );
+    }
+    if (values.since !== undefined && !isDay(values.since)) {
+      return usageError(
+        deps,
+        `--since takes a day as YYYY-MM-DD, such as 2026-11-01, not '${oneLine(values.since)}'`,
+      );
+    }
+    return retroCommand(values.since, values.log, deps);
   }
   if (command === "ask") {
     const [question, ...extra] = rest;
@@ -120,16 +150,8 @@ async function askCommand(
   deps: CliDeps,
 ): Promise<number> {
   const config = loadConfig(deps.env);
-  const path = log ?? config.defaultLogPath;
-  const opened = openLog(path);
-  if (!opened.ok) {
-    deps.stderr.write(
-      opened.error.kind === "missing"
-        ? `flight: no event log at ${path}\n`
-        : `flight: ${path} is not an event log: ${opened.error.message}\n`,
-    );
-    return 1;
-  }
+  const opened = openOrSay(log ?? config.defaultLogPath, deps);
+  if (!opened.ok) return 1;
   try {
     if (config.apiKey === undefined) {
       deps.stderr.write("flight: ANTHROPIC_API_KEY is not set\n");
@@ -163,6 +185,82 @@ async function askCommand(
   }
 }
 
+/** Opens the log at `path`, or says on stderr why it cannot. */
+function openOrSay(path: string, deps: CliDeps): ReturnType<typeof openLog> {
+  const opened = openLog(path);
+  if (!opened.ok) {
+    deps.stderr.write(
+      opened.error.kind === "missing"
+        ? `flight: no event log at ${path}\n`
+        : `flight: ${path} is not an event log: ${opened.error.message}\n`,
+    );
+  }
+  return opened;
+}
+
+async function retroCommand(
+  since: string | undefined,
+  log: string | undefined,
+  deps: CliDeps,
+): Promise<number> {
+  const config = loadConfig(deps.env);
+  const opened = openOrSay(log ?? config.defaultLogPath, deps);
+  if (!opened.ok) return 1;
+  try {
+    if (config.apiKey === undefined) {
+      deps.stderr.write("flight: ANTHROPIC_API_KEY is not set\n");
+      return 1;
+    }
+    return await runRetro(opened.value.reader, config.apiKey, since, deps);
+  } finally {
+    opened.value.close();
+  }
+}
+
+async function runRetro(
+  log: LogReader,
+  apiKey: string,
+  since: string | undefined,
+  deps: CliDeps,
+): Promise<number> {
+  const result = await retro(
+    {
+      log,
+      model: anthropicRunner(apiKey, deps.fetch),
+      prompt: readFileSync(RETRO_PROMPT_URL, "utf8"),
+      clock,
+      signal: deps.signal,
+      limits: deps.limits,
+    },
+    { since },
+  );
+  deps.stdout.write(renderRetro(result));
+  const record = result.ok ? result.value.record : result.error.record;
+  if (!result.ok) deps.stderr.write(`${retroFailureLine(result.error)}\n`);
+  if (record) deps.stderr.write(recordLine(record));
+  if (result.ok) return 0;
+  return result.error.kind === "cancelled" ? EXIT_CANCELLED : 1;
+}
+
+function retroFailureLine(failure: RetroFailure): string {
+  switch (failure.kind) {
+    case "withheld":
+      return failure.failed.length === 0
+        ? "causes withheld: it cited nothing"
+        : `causes withheld: ${failure.failed.map(shortId).join(", ")}`;
+    case "data_too_large":
+      return `stopped: the retro's data is ${String(Math.ceil(failure.bytes / 1000))} KB, over the ${String(RETRO_DATA_LIMIT_BYTES / 1000)} KB limit for one request; choose a later --since`;
+    case "timeout":
+      return `stopped: no answer within ${String(failure.seconds)} seconds`;
+    case "bad_reply":
+      return "stopped: the model's reply was not in the expected form";
+    case "cancelled":
+      return "stopped: cancelled";
+    case "model_error":
+      return `stopped: the model call failed: ${oneLine(failure.message)}`;
+  }
+}
+
 const shortId = (id: string): string => oneLine(id).slice(0, 80);
 
 function failureLine(failure: AskFailure): string {
@@ -189,8 +287,8 @@ function failureLine(failure: AskFailure): string {
   }
 }
 
-/** The one line about each question (AGENT-APPS.md section 7), without cost for now. */
-export function recordLine(record: AskRecord): string {
+/** The one line about each question or retro (AGENT-APPS.md section 7), without cost for now. */
+export function recordLine(record: AskRecord | RetroRecord): string {
   const fields = [
     `model=${record.model}`,
     `prompt=${record.promptHash.slice(0, 12)}`,

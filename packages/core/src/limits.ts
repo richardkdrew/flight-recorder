@@ -21,6 +21,13 @@ export const ROW_CAP = 100;
 /** Bytes of UTF-8 JSON one tool result may hold. */
 export const BYTE_CAP = 32_768;
 
+/** Bytes of UTF-8 JSON a retro may send the model inside `<retro>`: its changes' events and friction notes. */
+export const RETRO_DATA_LIMIT_BYTES = 200_000;
+
+/** Accepted changes a retro covers by default, and at most with `since`. */
+export const RETRO_LAST = 5;
+export const RETRO_MOST = 20;
+
 /** Limits to use instead of the defaults; one left out or undefined keeps its default. */
 export type LimitOverrides = {
   readonly [K in keyof Limits]?: Limits[K] | undefined;

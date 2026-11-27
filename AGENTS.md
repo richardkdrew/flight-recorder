@@ -33,6 +33,8 @@ Read `docs/ARCHITECTURE.md` and `docs/adr/` first; these are the things they do 
   It escapes only what Markdown would act on: inline syntax, a `#`, `+`, `-` or `1.` at the start, and the `://`, `www.` and `@` of bare links. A `-`, `:`, `.` or `'` inside the text stays as it is, because the acceptance tests look for headings and notes exactly as written.
   `|` is escaped only by `cell()`, in the table. If `markdownText()` escaped it too, a cell would get `\\|`, which ends the cell.
 - The `<retro>` data cap is measured on `JSON.stringify(data)` before `</` is escaped as `<\/` for the delimiter, which is the size the acceptance tests measure (they parse the JSON back and stringify it again).
+- The retro's output cap is `RETRO_OUTPUT_TOKENS` (8,192), not `DEFAULT_LIMITS.outputTokens` (4,096, a question's): the owner's real log of 5 changes was cut off at 4,096. `deps.limits.outputTokens` still overrides it, the timeout stays the shared 120 seconds.
+  A reply with `stop_reason` `max_tokens` is a `bad_reply` even if its text parses; the prompt's length limits (5 causes, 3 went-well items, two sentences and 10 ids each) are asked of the model, not enforced by the schema, which still allows 5 of each and any number of ids.
 - `flight ask`'s code was out of scope for this change, so `ask.ts` still has its own copies of the prompt hash and the reply's text, which the retro takes from `prompt.ts` and `model.ts`.
 - `data/synthetic/events.jsonl` now has 81 events: the 78 that `acceptance/fixtures/synthetic-before.ts` lists, and the three `merged` decisions of the older deliveries.
 

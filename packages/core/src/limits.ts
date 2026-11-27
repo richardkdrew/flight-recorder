@@ -24,6 +24,12 @@ export const BYTE_CAP = 32_768;
 /** Bytes of UTF-8 JSON a retro may send the model inside `<retro>`: its changes' events and friction notes. */
 export const RETRO_DATA_LIMIT_BYTES = 200_000;
 
+/**
+ * Output tokens a retro's one model call may produce, unless overridden: higher than a question's, since one
+ * reply carries every cause and what went well with all their ids, and a reply cut off at the cap is rejected.
+ */
+export const RETRO_OUTPUT_TOKENS = 8192;
+
 /** Accepted changes a retro covers by default, and at most with `since`. */
 export const RETRO_LAST = 5;
 export const RETRO_MOST = 20;

@@ -25,7 +25,8 @@ The model returns the causes and what went well as JSON with cited ids; the core
 
 ## Consequences
 
-- A retro costs one model call, bounded by the existing 120-second timeout and 4,096-token output cap, and by covering at most 20 changes.
+- A retro costs one model call, bounded by the existing 120-second timeout, an output cap of its own of 8,192 tokens (`RETRO_OUTPUT_TOKENS`; a question's calls keep 4,096), and by covering at most 20 changes.
+  The cap is twice a question's because one reply carries every cause and what went well with all their ids, and a real log's 5 changes were cut off at 4,096; the prompt also asks for a short reply (at most 5 causes and 3 went-well items, two sentences and 10 ids each), and a reply stopped at the cap is rejected as not in the expected form.
 - The change sections are printed even when the model fails or its citations do not check out.
 - The provider receives the covered changes' events and the friction notes in the range, the same kind of data ADR 0003 accepted under Anthropic's commercial API terms.
 - The site's later "retro step by step" can show the code's sections first and the model's causes after, from the same core functions.

@@ -10,6 +10,7 @@ import {
   RETRO_DATA_LIMIT_BYTES,
   RETRO_LAST,
   RETRO_MOST,
+  RETRO_OUTPUT_TOKENS,
   type LimitOverrides,
 } from "./limits.ts";
 import { projectName, type LogReader } from "./log.ts";
@@ -446,7 +447,11 @@ export async function retro(
   if (since !== null && !isDay(since)) {
     throw new Error(`since must be a day as YYYY-MM-DD, not ${since}`);
   }
-  const limits = resolveLimits(deps.limits);
+  // A question's limits, but with the retro's own output cap unless the caller overrides it.
+  const limits = resolveLimits({
+    ...deps.limits,
+    outputTokens: deps.limits?.outputTokens ?? RETRO_OUTPUT_TOKENS,
+  });
   const most = since === null ? RETRO_LAST : RETRO_MOST;
 
   // The changes covered: the latest acceptances, oldest first.
@@ -621,7 +626,11 @@ export async function retro(
     return stop({ kind: "model_error", message: "the model sent no reply" });
   }
 
-  const reply = parseRetroReply(replyText(final));
+  // A reply stopped at the output cap is cut off: never parsed, even when what arrived happens to be JSON.
+  const reply =
+    final.stop_reason === "max_tokens"
+      ? null
+      : parseRetroReply(replyText(final));
   if (!reply) return stop({ kind: "bad_reply" });
   if (reply.kind === "not_enough_data") {
     return {

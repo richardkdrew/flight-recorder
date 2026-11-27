@@ -10,6 +10,7 @@ export {
   RETRO_DATA_LIMIT_BYTES,
   RETRO_LAST,
   RETRO_MOST,
+  RETRO_OUTPUT_TOKENS,
   ROW_CAP,
 } from "./limits.ts";
 export type { LimitOverrides, Limits } from "./limits.ts";

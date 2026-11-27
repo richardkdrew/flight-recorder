@@ -187,6 +187,50 @@ describe("the change sections", () => {
     expect(rows?.map((r) => r.waitedMinutes)).toEqual([30, 125]);
   });
 
+  describe("a note and an event at the same time are ordered as the log records them", () => {
+    // Two changes of one project: c's latest event before the note is at 10:00, d's at 09:30, and d has
+    // an event at the note's own time, recorded just before or just after the note.
+    const c = delivery("c", ALPHA, "earlier");
+    const d = delivery("d", ALPHA, "tied");
+    const head = [
+      c.command("2026-11-01T09:00:00", "build", "succeeded"),
+      d.command("2026-11-01T09:30:00", "build", "succeeded"),
+      c.decided("2026-11-01T10:00:00", "accepted"),
+    ];
+    const tied = note("4", "2026-11-01T11:00:00", ALPHA, "a tied note");
+    const placed = async (events: readonly DataSetEvent[]) => {
+      const { result } = await run(events, [
+        finalReply({ kind: "not_enough_data", needs: "more" }),
+      ]);
+      const { changes, otherNotes } = facts(result);
+      return {
+        c: changes.find((x) => x.change === "earlier")?.notes.map((n) => n.id),
+        d: changes.find((x) => x.change === "tied")?.notes.map((n) => n.id),
+        other: otherNotes.map((n) => n.id),
+      };
+    };
+
+    test("an event recorded after the note, at its time, does not count as before it", async () => {
+      expect(
+        await placed([
+          ...head,
+          tied,
+          d.decided("2026-11-01T11:00:00", "accepted"),
+        ]),
+      ).toEqual({ c: [hex32("f4")], d: [], other: [] });
+    });
+
+    test("an event recorded before the note, at its time, does", async () => {
+      expect(
+        await placed([
+          ...head,
+          d.decided("2026-11-01T11:00:00", "accepted"),
+          tied,
+        ]),
+      ).toEqual({ c: [], d: [hex32("f4")], other: [] });
+    });
+  });
+
   test("names, answers and notes from the log are printed on one line, with control characters removed and | escaped in cells", async () => {
     const c = delivery("c", `${ALPHA}/`, "bad\u001b[31m | name\nhere");
     const { result } = await run([

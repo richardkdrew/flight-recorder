@@ -29,6 +29,7 @@ Read `docs/ARCHITECTURE.md` and `docs/adr/` first; these are the things they do 
   Keep any new field the site will need on the facts, not in the Markdown.
 - A decision is read with `CASE WHEN json_valid(data) THEN json_extract(...) END`, not `json_valid(...) AND json_extract(...)`: SQLite does not promise to short-circuit `AND`, and `json_extract` throws on malformed JSON.
 - The queries return `julianday(time)` as `jd`, and the code works in whole milliseconds, `Math.round(jd * 86_400_000)`, since flooring a difference of floating days can land a minute short.
+  Events at the same time are ordered by `seq`: compare two events with `isAfter()`, never with `ms` alone, or an event recorded just after a friction note at the same time counts as before it and the note lands under the wrong change.
 - Text from the log or the model goes into the Markdown through `markdownText()` in `retro-markdown.ts`. Only ids, inside code spans, go through `code()` instead.
   It escapes only what Markdown would act on: inline syntax, a `#`, `+`, `-` or `1.` at the start, and the `://`, `www.` and `@` of bare links. A `-`, `:`, `.` or `'` inside the text stays as it is, because the acceptance tests look for headings and notes exactly as written.
   `|` is escaped only by `cell()`, in the table. If `markdownText()` escaped it too, a cell would get `\\|`, which ends the cell.

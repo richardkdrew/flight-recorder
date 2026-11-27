@@ -383,7 +383,8 @@ function ownerOf(note: LogEvent, covered: readonly Covered[]): string | null {
   let best: { delivery: string; event: LogEvent } | null = null;
   for (const c of covered) {
     if (c.accepted.project !== note.rawProject) continue;
-    const latest = c.events.findLast((e) => e.ms <= note.ms);
+    // "At or before" in the log's order, (time, seq): an event at the note's time recorded after it is later.
+    const latest = c.events.findLast((e) => !isAfter(e, note));
     if (latest && (!best || isAfter(latest, best.event))) {
       best = { delivery: c.accepted.delivery, event: latest };
     }

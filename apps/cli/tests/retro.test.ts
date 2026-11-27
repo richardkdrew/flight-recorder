@@ -190,11 +190,40 @@ describe("the change sections", () => {
       note("2", "2026-11-01T11:00:00", `${ALPHA}/`, "two\nlines\u0007 | here"),
     ]);
     const markdown = renderRetro(result);
-    expect(markdown).toContain("## bad[31m | name here (alpha-shop)\n");
+    expect(markdown).toContain("## bad\\[31m | name here (alpha-shop)\n");
     expect(markdown).toContain("| bu\\|ild ended: succeeded |");
     expect(markdown).toContain(`- two lines | here (\`${hex32("f2")}\`)`);
     expect(markdown).not.toContain("\u001b");
     expect(markdown).not.toContain("\u0007");
+  });
+
+  test("Markdown in names, notes and cells from the log is escaped, so it prints as written", async () => {
+    const c = delivery("c", ALPHA, "# *big* <b>name</b>");
+    const { result } = await run([
+      c.command("2026-11-01T09:00:00", "[run](https://example.com)", "_ok_"),
+      c.decided("2026-11-01T09:30:00", "`accepted` \\| &amp;"),
+      c.decided("2026-11-01T10:00:00", "accepted"),
+      note(
+        "2",
+        "2026-11-01T11:00:00",
+        ALPHA,
+        "- see [link](https://example.com) ![img](x.png) ~~gone~~ www.example.com me@example.com",
+      ),
+      note("3", "2026-11-01T11:30:00", ALPHA, "1. not a list"),
+    ]);
+    const markdown = renderRetro(result);
+    expect(markdown).toContain(
+      "## \\# \\*big\\* \\<b\\>name\\</b\\> (alpha-shop)\n",
+    );
+    expect(markdown).toContain(
+      "| \\[run\\](https\\://example.com) ended: \\_ok\\_ |",
+    );
+    expect(markdown).toContain("| \\`accepted\\` \\\\\\| \\&amp; |");
+    expect(markdown).toContain(
+      `- \\- see \\[link\\](https\\://example.com) !\\[img\\](x.png) \\~\\~gone\\~\\~ www\\.example.com me\\@example.com (\`${hex32("f2")}\`)`,
+    );
+    expect(markdown).toContain(`- 1\\. not a list (\`${hex32("f3")}\`)`);
+    expect(markdown).not.toContain("[link](");
   });
 
   test("the title gives the number of changes and their acceptance days", async () => {
@@ -374,6 +403,40 @@ describe("the causes", () => {
     ]);
     expect(renderRetro(result)).toContain(
       `1. three changes (3 changes, 1 event): \`${a.id}\`, \`${b.id}\`, \`${hex32("ec02")}\``,
+    );
+  });
+
+  test("Markdown in the model's causes and what went well is escaped, so it prints as written", async () => {
+    const { result } = await run(THREE, [
+      finalReply({
+        kind: "retro",
+        causes: [
+          {
+            text: "**bold** [link](https://example.com) <script>x</script>",
+            cites: [hex32("ea01"), hex32("eb01")],
+          },
+        ],
+        went_well: [{ text: "# _heading_ `code`", cites: [c.id] }],
+      }),
+    ]);
+    const markdown = renderRetro(result);
+    expect(markdown).toContain(
+      "1. \\*\\*bold\\*\\* \\[link\\](https\\://example.com) \\<script\\>x\\</script\\> (2 changes, 2 events): ",
+    );
+    expect(markdown).toContain("- \\# \\_heading\\_ \\`code\\`: ");
+    expect(markdown).not.toContain("[link](");
+    expect(markdown).not.toContain("<script>");
+  });
+
+  test("Markdown in what the model says it needs is escaped", async () => {
+    const { result } = await run(TWO, [
+      finalReply({
+        kind: "not_enough_data",
+        needs: "[more](https://example.com) *data*",
+      }),
+    ]);
+    expect(renderRetro(result)).toContain(
+      "not enough data yet: \\[more\\](https\\://example.com) \\*data\\*\n",
     );
   });
 

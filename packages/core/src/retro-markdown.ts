@@ -1,6 +1,7 @@
 // A retro as Markdown: the change sections from the code's facts, then, when the model's causes passed the
 // citation check, the causes that repeat and what went well. Text from the log or the model is untrusted:
-// control characters are removed, newlines become spaces, and `|` is escaped in table cells.
+// control characters are removed, newlines become spaces, Markdown syntax is escaped so it prints as written,
+// and `|` is escaped in table cells.
 
 import type {
   RetroChange,
@@ -21,6 +22,26 @@ export function oneLine(text: string): string {
     .trim();
 }
 
+// Characters that start inline Markdown anywhere in a line: a backslash escape, code, emphasis, links and
+// images, raw HTML and `<...>` autolinks, entities and strikethrough. `|` means something only in a table,
+// so `cell` escapes it there: escaping it here too would make `\\|` in a cell, which ends the cell.
+const INLINE = /[\\`*_[\]<>&~]/g;
+
+/**
+ * Untrusted text as Markdown that prints as written: on one line, with inline syntax escaped, a leading
+ * `#`, `+`, `-` or `1.` escaped so it does not start a heading or list inside the line it is put in, and
+ * bare URLs and email addresses broken up so GitHub-flavoured Markdown does not turn them into links.
+ */
+function markdownText(text: string): string {
+  return oneLine(text)
+    .replace(INLINE, "\\$&")
+    .replace(/^[#+-]/, "\\$&")
+    .replace(/^(\d+)([.)])/, "$1\\$2")
+    .replace(/:(?=\/\/)/g, "\\:")
+    .replace(/\b(www)\./gi, "$1\\.")
+    .replaceAll("@", "\\@");
+}
+
 /** An id or other value as inline code. */
 const code = (text: string): string =>
   `\`${oneLine(text).replaceAll("`", "")}\``;
@@ -32,7 +53,7 @@ const cell = (text: string): string => text.replaceAll("|", "\\|");
 function day(time: string): string {
   const date = new Date(time);
   return Number.isNaN(date.getTime())
-    ? oneLine(time)
+    ? markdownText(time)
     : date.toISOString().slice(0, 10);
 }
 
@@ -62,12 +83,12 @@ function stopCells(row: RetroRow): [string, string] {
   switch (row.stop.kind) {
     case "escalated":
       return [
-        `escalated: ${oneLine(row.stop.escalation)} (${oneLine(row.stop.count)})`,
+        `escalated: ${markdownText(row.stop.escalation)} (${markdownText(row.stop.count)})`,
         code(row.stop.id),
       ];
     case "command":
       return [
-        `${oneLine(row.stop.command)} ended: ${oneLine(row.stop.outcome)}`,
+        `${markdownText(row.stop.command)} ended: ${markdownText(row.stop.outcome)}`,
         code(row.stop.id),
       ];
     case "none":
@@ -76,15 +97,15 @@ function stopCells(row: RetroRow): [string, string] {
 }
 
 function noteItem(note: RetroNote): string {
-  const text = note.note === null ? "(no note)" : oneLine(note.note);
+  const text = note.note === null ? "(no note)" : markdownText(note.note);
   return `- ${text} (${code(note.id)})`;
 }
 
 function changeSection(change: RetroChange): string[] {
   const name =
-    change.change === null ? "(no change name)" : oneLine(change.change);
+    change.change === null ? "(no change name)" : markdownText(change.change);
   const project =
-    change.project === null ? "no project" : oneLine(change.project);
+    change.project === null ? "no project" : markdownText(change.project);
   const c = change.counts;
   const lines = [
     `## ${name} (${project})`,
@@ -98,7 +119,7 @@ function changeSection(change: RetroChange): string[] {
     ...change.rows.map((row) => {
       const cells = [
         ...stopCells(row),
-        oneLine(row.answer),
+        markdownText(row.answer),
         code(row.answerId),
         waited(row.waitedMinutes),
       ];
@@ -132,7 +153,7 @@ export function renderRetro(result: RetroResult): string {
   if (result.ok) {
     const outcome = result.value;
     if (outcome.kind === "not_enough_data") {
-      lines.push(`not enough data yet: ${oneLine(outcome.needs)}`, "");
+      lines.push(`not enough data yet: ${markdownText(outcome.needs)}`, "");
     } else {
       lines.push("## Causes that repeat", "");
       if (outcome.causes.length === 0) {
@@ -140,13 +161,13 @@ export function renderRetro(result: RetroResult): string {
       }
       for (const [i, cause] of outcome.causes.entries()) {
         lines.push(
-          `${String(i + 1)}. ${oneLine(cause.text)} (${plural(cause.changes, "change", "changes")}, ${plural(cause.events, "event", "events")}): ${ids(cause.cites)}`,
+          `${String(i + 1)}. ${markdownText(cause.text)} (${plural(cause.changes, "change", "changes")}, ${plural(cause.events, "event", "events")}): ${ids(cause.cites)}`,
         );
       }
       lines.push("", "## What went well", "");
       if (outcome.wentWell.length === 0) lines.push("Nothing to note.");
       for (const item of outcome.wentWell) {
-        lines.push(`- ${oneLine(item.text)}: ${ids(item.cites)}`);
+        lines.push(`- ${markdownText(item.text)}: ${ids(item.cites)}`);
       }
       lines.push("");
     }

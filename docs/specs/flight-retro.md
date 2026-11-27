@@ -1,6 +1,6 @@
 ---
 title: flight retro
-status: draft
+status: approved
 size: full
 criteria:
   - id: AC6

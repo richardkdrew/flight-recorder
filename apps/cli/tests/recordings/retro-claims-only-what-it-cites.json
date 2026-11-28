@@ -1,0 +1,581 @@
+{
+  "about": "Issue #12: a retro claims a pattern only for the changes whose events it cites. Of 4 accepted changes, tide-sync and berth-rules waited more than 10 hours on the owner, quay-labels and mooring-map never waited an hour; berth-rules had a rule stop, and mooring-map's checks failed on the test agent's skeleton before its first build. A cause about hours must cite neither short change, a cause about tests must not cite the rule stop, and no cause may cite the checks before the first build.",
+  "model": "claude-sonnet-5-5",
+  "command": "retro",
+  "hand_written": false,
+  "recorded_at": null,
+  "outcome": "retro",
+  "events": [
+    {
+      "id": "e1010000000000000000000000000000",
+      "time": "2026-11-10T09:00:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "tide-sync",
+      "delivery": "d1000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "design",
+        "seconds": 600,
+        "outcome": "succeeded"
+      }
+    },
+    {
+      "id": "e1020000000000000000000000000000",
+      "time": "2026-11-10T20:30:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "tide-sync",
+      "delivery": "d1000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "approved",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    },
+    {
+      "id": "e1030000000000000000000000000000",
+      "time": "2026-11-11T09:00:00+00:00",
+      "type": "orc.agent.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "tide-sync",
+      "delivery": "d1000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "agent": "test",
+        "harness": "claude",
+        "model": "claude-opus-5-5",
+        "models": ["claude-opus-5-5"],
+        "effort": "high",
+        "brief": "abababababababab",
+        "seconds": 600,
+        "outcome": "succeeded",
+        "input_tokens": 1000,
+        "cached_tokens": 200,
+        "output_tokens": 300,
+        "cost_usd": 0.5
+      }
+    },
+    {
+      "id": "e1040000000000000000000000000000",
+      "time": "2026-11-11T09:30:00+00:00",
+      "type": "orc.agent.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "tide-sync",
+      "delivery": "d1000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "agent": "engineering",
+        "harness": "claude",
+        "model": "claude-opus-5-5",
+        "models": ["claude-opus-5-5"],
+        "effort": "high",
+        "brief": "abababababababab",
+        "seconds": 600,
+        "outcome": "succeeded",
+        "input_tokens": 1000,
+        "cached_tokens": 200,
+        "output_tokens": 300,
+        "cost_usd": 0.5
+      }
+    },
+    {
+      "id": "e1050000000000000000000000000000",
+      "time": "2026-11-11T09:40:00+00:00",
+      "type": "orc.checks.recorded.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "tide-sync",
+      "delivery": "d1000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "where": "the owner's Mac",
+        "passed": 30,
+        "failed": 0
+      }
+    },
+    {
+      "id": "e1060000000000000000000000000000",
+      "time": "2026-11-11T10:00:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "tide-sync",
+      "delivery": "d1000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "build",
+        "seconds": 600,
+        "outcome": "succeeded"
+      }
+    },
+    {
+      "id": "e1070000000000000000000000000000",
+      "time": "2026-11-11T21:15:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "tide-sync",
+      "delivery": "d1000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "accepted",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    },
+    {
+      "id": "f1000000000000000000000000000000",
+      "time": "2026-11-11T21:30:00+00:00",
+      "type": "orc.friction.noted.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": null,
+      "delivery": null,
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "note": "the spec and the preview both sat until the evening before I saw them"
+      }
+    },
+    {
+      "id": "e2010000000000000000000000000000",
+      "time": "2026-11-12T09:00:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "design",
+        "seconds": 600,
+        "outcome": "succeeded"
+      }
+    },
+    {
+      "id": "e2020000000000000000000000000000",
+      "time": "2026-11-12T09:30:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "approved",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    },
+    {
+      "id": "e2030000000000000000000000000000",
+      "time": "2026-11-12T09:50:00+00:00",
+      "type": "orc.agent.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "agent": "test",
+        "harness": "claude",
+        "model": "claude-opus-5-5",
+        "models": ["claude-opus-5-5"],
+        "effort": "high",
+        "brief": "abababababababab",
+        "seconds": 600,
+        "outcome": "succeeded",
+        "input_tokens": 1000,
+        "cached_tokens": 200,
+        "output_tokens": 300,
+        "cost_usd": 0.5
+      }
+    },
+    {
+      "id": "e2040000000000000000000000000000",
+      "time": "2026-11-12T10:20:00+00:00",
+      "type": "orc.agent.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "agent": "engineering",
+        "harness": "claude",
+        "model": "claude-opus-5-5",
+        "models": ["claude-opus-5-5"],
+        "effort": "high",
+        "brief": "abababababababab",
+        "seconds": 600,
+        "outcome": "succeeded",
+        "input_tokens": 1000,
+        "cached_tokens": 200,
+        "output_tokens": 300,
+        "cost_usd": 0.5
+      }
+    },
+    {
+      "id": "e2050000000000000000000000000000",
+      "time": "2026-11-12T10:25:00+00:00",
+      "type": "orc.run.escalated.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "kind": "rules",
+        "count": 1,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e"
+      }
+    },
+    {
+      "id": "e2060000000000000000000000000000",
+      "time": "2026-11-12T10:26:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "build",
+        "seconds": 600,
+        "outcome": "stopped"
+      }
+    },
+    {
+      "id": "e2070000000000000000000000000000",
+      "time": "2026-11-12T22:00:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "allowed",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    },
+    {
+      "id": "e2080000000000000000000000000000",
+      "time": "2026-11-12T22:30:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "build",
+        "seconds": 600,
+        "outcome": "succeeded"
+      }
+    },
+    {
+      "id": "e2090000000000000000000000000000",
+      "time": "2026-11-13T09:00:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "berth-rules",
+      "delivery": "d2000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "accepted",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    },
+    {
+      "id": "e3010000000000000000000000000000",
+      "time": "2026-11-14T09:00:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "quay-labels",
+      "delivery": "d3000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "design",
+        "seconds": 600,
+        "outcome": "succeeded"
+      }
+    },
+    {
+      "id": "e3020000000000000000000000000000",
+      "time": "2026-11-14T09:20:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "quay-labels",
+      "delivery": "d3000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "approved",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    },
+    {
+      "id": "e3030000000000000000000000000000",
+      "time": "2026-11-14T09:40:00+00:00",
+      "type": "orc.agent.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "quay-labels",
+      "delivery": "d3000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "agent": "test",
+        "harness": "claude",
+        "model": "claude-opus-5-5",
+        "models": ["claude-opus-5-5"],
+        "effort": "high",
+        "brief": "abababababababab",
+        "seconds": 600,
+        "outcome": "succeeded",
+        "input_tokens": 1000,
+        "cached_tokens": 200,
+        "output_tokens": 300,
+        "cost_usd": 0.5
+      }
+    },
+    {
+      "id": "e3040000000000000000000000000000",
+      "time": "2026-11-14T10:00:00+00:00",
+      "type": "orc.agent.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "quay-labels",
+      "delivery": "d3000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "agent": "engineering",
+        "harness": "claude",
+        "model": "claude-opus-5-5",
+        "models": ["claude-opus-5-5"],
+        "effort": "high",
+        "brief": "abababababababab",
+        "seconds": 600,
+        "outcome": "succeeded",
+        "input_tokens": 1000,
+        "cached_tokens": 200,
+        "output_tokens": 300,
+        "cost_usd": 0.5
+      }
+    },
+    {
+      "id": "e3050000000000000000000000000000",
+      "time": "2026-11-14T10:20:00+00:00",
+      "type": "orc.checks.recorded.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "quay-labels",
+      "delivery": "d3000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "where": "the owner's Mac",
+        "passed": 24,
+        "failed": 0
+      }
+    },
+    {
+      "id": "e3060000000000000000000000000000",
+      "time": "2026-11-14T10:30:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "quay-labels",
+      "delivery": "d3000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "build",
+        "seconds": 600,
+        "outcome": "succeeded"
+      }
+    },
+    {
+      "id": "e3070000000000000000000000000000",
+      "time": "2026-11-14T11:00:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "quay-labels",
+      "delivery": "d3000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "accepted",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    },
+    {
+      "id": "e4010000000000000000000000000000",
+      "time": "2026-11-15T09:00:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "mooring-map",
+      "delivery": "d4000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "design",
+        "seconds": 600,
+        "outcome": "succeeded"
+      }
+    },
+    {
+      "id": "e4020000000000000000000000000000",
+      "time": "2026-11-15T09:15:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "mooring-map",
+      "delivery": "d4000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "approved",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    },
+    {
+      "id": "e4030000000000000000000000000000",
+      "time": "2026-11-15T09:30:00+00:00",
+      "type": "orc.agent.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "mooring-map",
+      "delivery": "d4000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "agent": "test",
+        "harness": "claude",
+        "model": "claude-opus-5-5",
+        "models": ["claude-opus-5-5"],
+        "effort": "high",
+        "brief": "abababababababab",
+        "seconds": 600,
+        "outcome": "succeeded",
+        "input_tokens": 1000,
+        "cached_tokens": 200,
+        "output_tokens": 300,
+        "cost_usd": 0.5
+      }
+    },
+    {
+      "id": "e4040000000000000000000000000000",
+      "time": "2026-11-15T09:35:00+00:00",
+      "type": "orc.checks.recorded.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "mooring-map",
+      "delivery": "d4000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "where": "the owner's Mac",
+        "passed": 0,
+        "failed": 18
+      }
+    },
+    {
+      "id": "e4050000000000000000000000000000",
+      "time": "2026-11-15T10:00:00+00:00",
+      "type": "orc.agent.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "mooring-map",
+      "delivery": "d4000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "agent": "engineering",
+        "harness": "claude",
+        "model": "claude-opus-5-5",
+        "models": ["claude-opus-5-5"],
+        "effort": "high",
+        "brief": "abababababababab",
+        "seconds": 600,
+        "outcome": "succeeded",
+        "input_tokens": 1000,
+        "cached_tokens": 200,
+        "output_tokens": 300,
+        "cost_usd": 0.5
+      }
+    },
+    {
+      "id": "e4060000000000000000000000000000",
+      "time": "2026-11-15T10:20:00+00:00",
+      "type": "orc.checks.recorded.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "mooring-map",
+      "delivery": "d4000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "where": "the owner's Mac",
+        "passed": 18,
+        "failed": 0
+      }
+    },
+    {
+      "id": "e4070000000000000000000000000000",
+      "time": "2026-11-15T10:30:00+00:00",
+      "type": "orc.command.finished.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "mooring-map",
+      "delivery": "d4000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "command": "build",
+        "seconds": 600,
+        "outcome": "succeeded"
+      }
+    },
+    {
+      "id": "e4080000000000000000000000000000",
+      "time": "2026-11-15T11:10:00+00:00",
+      "type": "orc.owner.decided.v1",
+      "project": "/Users/someone/Work/harbour-app",
+      "change": "mooring-map",
+      "delivery": "d4000000000000000000000000000000",
+      "source": "orc@5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+      "data": {
+        "decision": "accepted",
+        "questions": 0,
+        "despite_review": false,
+        "commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "reviewed_commit": "5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+        "version": "1"
+      }
+    }
+  ],
+  "responses": [
+    {
+      "id": "msg_hand_written_retro_1",
+      "type": "message",
+      "role": "assistant",
+      "model": "claude-sonnet-5-5",
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"kind\": \"retro\", \"causes\": [{\"text\": \"Specs, stops and previews waited more than ten hours for the owner's answer in the two changes that ran overnight.\", \"cites\": [\"e1020000000000000000000000000000\", \"e1070000000000000000000000000000\", \"e2070000000000000000000000000000\", \"e2090000000000000000000000000000\", \"f1000000000000000000000000000000\"]}], \"went_well\": [{\"text\": \"The two changes with no stop were accepted within an hour of their builds.\", \"cites\": [\"e3070000000000000000000000000000\", \"e4080000000000000000000000000000\"]}]}"
+        }
+      ],
+      "stop_reason": "end_turn",
+      "stop_sequence": null,
+      "usage": {
+        "input_tokens": 4000,
+        "output_tokens": 200,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0
+      }
+    }
+  ]
+}

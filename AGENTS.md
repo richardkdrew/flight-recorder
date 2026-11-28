@@ -40,10 +40,25 @@ Read `docs/ARCHITECTURE.md` and `docs/adr/` first; these are the things they do 
 - `flight ask`'s code was out of scope for this change, so `ask.ts` still has its own copies of the prompt hash and the reply's text, which the retro takes from `prompt.ts` and `model.ts`.
 - `data/synthetic/events.jsonl` now has 81 events: the 78 that `acceptance/fixtures/synthetic-before.ts` lists, and the three `merged` decisions of the older deliveries.
 
+## The proposal
+
+- `propose()` (`packages/core/src/propose.ts`) runs the retro through `retroWithData()`, which is `retro()` plus what it sent the model (`RetroSent`: each id's covered change, the deliveries, the events as sent).
+  That is how the proposal is counted exactly as a cause is, and sends the events in the same shape, without the retro's code changing; `retro()` itself is a thin wrapper and must keep behaving the same (AC26).
+- The second call is made only when the retro is `ok`, of kind `retro`, with at least one printed cause; otherwise `proposal` is null and the CLI ends exactly as `flight retro` would, adding the "a proposal needs at least one cause" line only when `## Causes that repeat` was printed.
+- The checks run in a fixed order: citations first (only ids a printed cause cites), then `findPrivateDetail()` (a covered change's name, any project's last segment in the whole log, a path, an email address).
+  The projects query (`SELECT DISTINCT project ...`) runs only after the citation check passes, and its names are never sent to the model.
+- The issue's body is `renderProposal().body`, the printed section without its heading, so what is printed is what is posted; never build the body separately.
+- `CliDeps.answer` and `CliDeps.run` are optional, and when either is absent the CLI asks nothing and runs nothing. `main.ts` passes `answer` only when stdin is a TTY, so piped input can never confirm.
+  `terminal.ts` reads the answer with readline in `terminal: false`, so the terminal keeps its own line mode: it echoes what is typed and Ctrl-C reaches the process as SIGINT, which aborts `deps.signal` (exit 130).
+- `gh` was not run while building this (the engineering agent may not run it): `--body-file -` reading standard input, `gh issue create` asking nothing when given a title and body, and the URL on its first line of stdout are assumptions to check on the owner's Mac.
+
 ## Tests
 
 - Unit tests live in `apps/cli/tests`, including those of the core's behaviour: the core's tsconfig covers only `src`, and its tests need `node:sqlite` to run the core's queries.
 - `apps/cli/tests/recordings/*.json` are the recorded cases. A case with `hand_written: false` is refreshed by `make record`; `recorded_at: null` means it has never been recorded from the live model, and its responses were written by hand in the recorded form.
+  A case's `command` is `ask` (the default, with a `question`, on the synthetic data set) or `retro` (with `events`, its own small log, and no question); `make record` re-records a retro case through `retro()` on a new log of its events.
+  `retro-claims-only-what-it-cites.json` (issue #12) is checked for what its causes cite, not only how it ends, so a live reply that overstates fails `make check` after `make record`; that is intended.
+- `acceptance/ac19-default-timeout.test.ts` waits the real 120 seconds and `acceptance/ac23-gh-timeout.test.ts` the real 60 seconds of `gh`'s limit, so the acceptance run takes about two minutes.
 - The question's timeout is an `AbortSignal.timeout`, whose timer does not keep Node alive; a fake `fetch` that hangs must hold a timer of its own, as `apps/cli/tests/replay.ts` does.
 - `acceptance/ac5-default-timeout.test.ts` waits the real 120 seconds and checks the time with `performance.now()`. If the Mac sleeps during it (on battery, `pmset -g log` shows `Maintenance Sleep` and `DarkWake`), it reports 400 seconds or more and fails, and `caffeinate -i` does not stop that sleep. Rerun it with the Mac awake before suspecting the timeout code.
 - A tool result's byte cap is checked against the exact JSON `fitRows` emits, `truncated` included; `describe_log` passes its types and versions to it as one list, so the cap covers the whole result.

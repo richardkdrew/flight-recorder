@@ -79,14 +79,15 @@ It is a real agent, not a fixed prompt: for each question the model chooses whic
   The runtime passes the runner into the core, which steps it one model call at a time, so the core counts the calls, applies the timeout and records which ids each tool returned.
   The core does not import the SDK itself, because the SDK's types bring in Node's (ADR 0001).
 - The CLI uses `claude-sonnet-5-5`.
-- A retro is the exception (ADR 0004): the code builds each change's section from fixed queries, and the model, in one call with no tools, writes only the causes that repeat and what went well over the events the code chose; the core checks their citations and counts them.
+- A retro is the exception (ADR 0004): the code builds each change's section from fixed queries, and the model, in one call with no tools, writes only the causes that repeat and what went well over the events the code chose; the core checks their citations and counts them, and drops any that says "every", "all" or "most" beyond the changes it cites.
+- A proposal (ADR 0005) is one more call with no tools after a retro, over the causes it printed and the events they cite; the core checks that it cites only ids those causes cite and names no covered change or project, and the CLI opens it as an issue only when the owner confirms.
 
 ## Parts
 
 - **`packages/core`:** the agent: its tools, its prompts (as files), the citation check, the "not enough data" rule and the limits.
   It reaches data only through a small interface for read-only queries, so it never knows whether the data is a local SQLite file or D1, and the model only through a tool runner the runtime passes in.
   The queries are the core's own fixed SQL, which runs on SQLite and on D1 alike.
-- **`apps/cli`:** the `flight` command (`flight ask`, `flight retro`, `flight seed`), over a read-only `node:sqlite` connection (ADR 0002) and the Anthropic SDK's tool runner.
+- **`apps/cli`:** the `flight` command (`flight ask`, `flight retro`, `flight propose`, `flight seed`), over a read-only `node:sqlite` connection (ADR 0002) and the Anthropic SDK's tool runner; `flight propose` opens its issue through the owner's `gh` login.
 - **`data/synthetic/events.jsonl`:** the synthetic data set, one event per line in the format of orc's own export; `flight seed <file>` writes it into a new log.
 
 The packages are one npm workspace, used as source with no build step (ADR 0001).
@@ -98,7 +99,8 @@ The CLI is never deployed; it runs only on the owner's Mac.
 
 The repository follows the owner's `AGENT-APPS.md` and `TYPESCRIPT.md` standards; these are the rules that matter most here.
 
-- **Read-only.** Flight Recorder never writes to the event log or the factory.
+- **Read-only.** Flight Recorder never writes to the event log or the factory's code.
+  Its one write anywhere is a proposal opened as an issue on the factory repository, by the CLI's code, after the owner has read it and confirmed at a terminal (ADR 0005); the model never has a tool that writes.
   A proposal is something the owner reads and acts on, and the owner merges every factory change.
 - **Grounded.** Every claim cites event ids or delivery ids, with counts.
   The core checks every citation before an answer is shown: each cited id exists and came from a tool in that same answer, or, in a retro, from the data the core sent.
@@ -168,7 +170,7 @@ It deploys from its own repository through GitHub Actions, as the factory's depl
 
 1. **`flight ask`:** grounded answers over the factory's log, read-only, or another log with `--log`, with the synthetic data set and `flight seed`, and the core as its own package.
 2. **`flight retro`:** a retro over the last 5 accepted changes, or those since a date, including the friction notes; it keeps no record of its own.
-3. **Proposals:** one per retro, opened as a GitHub issue on the factory repository from the CLI; its effect is reported after the next 5 changes.
+3. **Proposals:** one per retro, opened as a GitHub issue on the factory repository from the CLI when the owner confirms; its effect is reported after the next 5 changes, in a change of its own.
 4. **The curated export** of Flight Recorder's own deliveries, which the owner approves.
 5. **The site:** the concept pages, the stories and the timeline, static, on Cloudflare, on the exported data.
 6. **The live part:** `ask` and the retro on the site, with the spending caps.

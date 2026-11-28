@@ -23,6 +23,23 @@ Read `docs/ARCHITECTURE.md` and `docs/adr/` first; these are the things they do 
 - Only `apps/cli/src/main.ts` and `apps/cli/src/config.ts` may read `process.env` or the clock (eslint).
   A script entry point such as `apps/cli/tests/record.ts` gets them from `config.ts` (`processEnv`, `now`, `clock`).
 
+## The retro
+
+- `retro()` (`packages/core/src/retro.ts`) returns the change sections' facts on both sides of its `Result`, and `renderRetro()` (`retro-markdown.ts`) prints them either way; the CLI adds only the stderr lines.
+  Keep any new field the site will need on the facts, not in the Markdown.
+- A decision is read with `CASE WHEN json_valid(data) THEN json_extract(...) END`, not `json_valid(...) AND json_extract(...)`: SQLite does not promise to short-circuit `AND`, and `json_extract` throws on malformed JSON.
+- The queries return `julianday(time)` as `jd`, and the code works in whole milliseconds, `Math.round(jd * 86_400_000)`, since flooring a difference of floating days can land a minute short.
+  Events at the same time are ordered by `seq`: compare two events with `isAfter()`, never with `ms` alone, or an event recorded just after a friction note at the same time counts as before it and the note lands under the wrong change.
+- Text from the log or the model goes into the Markdown through `markdownText()` in `retro-markdown.ts`. Only ids, inside code spans, go through `code()` instead.
+  It escapes only what Markdown would act on: inline syntax, a `#`, `+`, `-` or `1.` at the start, and the `://`, `www.` and `@` of bare links. A `-`, `:`, `.` or `'` inside the text stays as it is, because the acceptance tests look for headings and notes exactly as written.
+  A went-well item is its text, one space, then its ids, with no colon: the owner saw `working.:` when the text ended in a full stop. A cause keeps `: ` before its ids, since it follows the `(<n> changes, <m> events)` the code adds.
+  `|` is escaped only by `cell()`, in the table. If `markdownText()` escaped it too, a cell would get `\\|`, which ends the cell.
+- The `<retro>` data cap is measured on `JSON.stringify(data)` before `</` is escaped as `<\/` for the delimiter, which is the size the acceptance tests measure (they parse the JSON back and stringify it again).
+- The retro's output cap is `RETRO_OUTPUT_TOKENS` (8,192), not `DEFAULT_LIMITS.outputTokens` (4,096, a question's): the owner's real log of 5 changes was cut off at 4,096. `deps.limits.outputTokens` still overrides it, the timeout stays the shared 120 seconds.
+  A reply with `stop_reason` `max_tokens` is a `bad_reply` even if its text parses; the prompt's length limits (5 causes, 3 went-well items, two sentences and 10 ids each) are asked of the model, not enforced by the schema, which still allows 5 of each and any number of ids.
+- `flight ask`'s code was out of scope for this change, so `ask.ts` still has its own copies of the prompt hash and the reply's text, which the retro takes from `prompt.ts` and `model.ts`.
+- `data/synthetic/events.jsonl` now has 81 events: the 78 that `acceptance/fixtures/synthetic-before.ts` lists, and the three `merged` decisions of the older deliveries.
+
 ## Tests
 
 - Unit tests live in `apps/cli/tests`, including those of the core's behaviour: the core's tsconfig covers only `src`, and its tests need `node:sqlite` to run the core's queries.

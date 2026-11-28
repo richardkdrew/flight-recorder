@@ -60,3 +60,16 @@ export function delayed(ms: number, reply: Reply): Reply {
   if (reply.kind !== "body") throw new Error("delayed() takes a reply body");
   return { kind: "delayed", ms, body: reply.body };
 }
+
+/** A cause or a went-well item of a retro reply, with the ids it cites. */
+export type RetroItem = { readonly text: string; readonly cites: readonly string[] };
+
+/** A retro's final reply: the causes that repeat and what went well (docs/specs/flight-retro.md). */
+export function retroReply(causes: readonly RetroItem[], wentWell: readonly RetroItem[]): Reply {
+  return { kind: "body", body: finalText({ kind: "retro", causes, went_well: wentWell }) };
+}
+
+/** A final reply whose text is `text` as it is, in whatever form. */
+export function rawText(text: string): Reply {
+  return { kind: "body", body: message([{ type: "text", text }], "end_turn") };
+}

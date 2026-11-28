@@ -1,6 +1,6 @@
 ---
 title: flight propose
-status: draft
+status: approved
 size: full
 criteria:
   - id: AC18

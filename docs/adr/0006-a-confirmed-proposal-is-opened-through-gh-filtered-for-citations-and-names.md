@@ -1,6 +1,6 @@
 # 0006: A confirmed proposal is opened as an issue through `gh`, filtered in code for its citations and the names it holds
 
-Status: proposed
+Status: superseded by 0007
 Date: 2026-11-28
 Supersedes: 0005
 

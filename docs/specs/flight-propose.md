@@ -11,7 +11,7 @@ criteria:
     text: "When the proposal cites nothing or cites an id that no printed cause cites, when its reply is not in the expected form or stopped at the output cap, or when no reply arrives within the timeout (120 seconds by default), `flight propose` still prints the retro but no `## Proposal`, asks no question, runs no command, says on stderr `proposal withheld: <ids>`, `proposal withheld: it cited nothing`, `stopped: the model's reply was not in the expected form` or `stopped: no answer within <s> seconds`, and exits 1."
   - id: AC20
     kind: new
-    text: "When the proposal's title, problem or change holds the name of a covered change, or the last path segment of a covered change's project, as a whole word in any case, `flight propose` prints no `## Proposal`, asks no question, runs no command, says on stderr `proposal withheld: it names <name>`, and exits 1."
+    text: "Before printing a proposal, `flight propose` withholds it, printing no `## Proposal`, asking no question, running no command and exiting 1, when its title, problem or change holds, checked in this order with the first found reported on stderr: the name of a covered change as a whole word in any case (`proposal withheld: it names <name>`); the last path segment of any project in the log, covered or not, as a whole word in any case (`proposal withheld: it holds private detail: the project <segment>`); a filesystem path, that is `/`, `~/` or `./` at the start of the text or after whitespace or one of `(`, `[`, `\"`, `'` or a backtick, followed by a letter, digit, `.`, `-` or `_`, or `/Users/`, `/private/` or `/home/` anywhere (`proposal withheld: it holds private detail: a path`); or an email address (`proposal withheld: it holds private detail: an email address`). A `/` inside a word, such as `and/or`, is not a path."
   - id: AC21
     kind: new
     text: "When the retro prints no cause (fewer than 2 changes covered, the reply says there is not enough data, no cause is left after the checks, or any failure of AC13), `flight propose` sends no second request, asks no question and runs no command; it prints what `flight retro` prints, adds `not enough data yet: a proposal needs at least one cause that repeats` when `## Causes that repeat` was printed with no cause, and exits as `flight retro` would. When the proposal's reply says the causes cannot support a proposal, it prints `not enough data yet: ` followed by what the reply says it would need, asks no question, runs no command, and exits 0."
@@ -43,12 +43,12 @@ questions:
 ## What
 
 `flight propose` runs the retro you know from `flight retro`, prints it, and then drafts one improvement proposal for the factory from the causes it printed, citing the events it rests on, and prints that too.
-It then asks whether to open the proposal as an issue on `richardkdrew/agentic-orc-factory`, and opens it, exactly as printed, only when you answer yes.
+It then asks whether to open the proposal as an issue on `richardkdrew/agentic-orc-factory`, and opens it, exactly as printed, only when you answer yes; a proposal that names a change or a project in the log, or holds a path or an email address, is withheld before it is printed.
 The retro's prompt now tells the model to claim a pattern only for the changes it cites and how to read the tests and stops (issue #12), since the proposal rests on that text; a recorded retro case checks it, and you judge it by running the retro on the real log before and after.
 
 ## Approach
 
-**Shape** (ADR 0004 for the retro, ADR 0005 for the proposal).
+**Shape** (ADR 0004 for the retro, ADR 0007 for the proposal).
 The retro keeps no record, so `flight propose` runs the retro itself, with the same `--since` and `--log`, and prints it exactly as `flight retro` does; you then see the very causes the proposal rests on, in the same output.
 With at least one cause printed, the core makes one more model call, with no tools, through the same `ModelRunner`.
 This is the lightest shape that meets "after a retro" without storing anything: a proposal needs the causes, the causes need the retro's call, and the alternatives (a retro that writes a file, or a propose that reads the retro's Markdown back) would add state or parse untrusted text.
@@ -64,7 +64,14 @@ The reply is one JSON object parsed with Zod: `{"kind":"proposal","title":"…",
 **The checks** (AC19, AC20), in this order, the first that fails withholding the proposal:
 
 1. It cites at least one id, and every id it cites is one a printed cause cites.
-2. Its title, problem and change hold no covered change name and no covered project's last path segment as a whole word, compared in any case, a word's edges being anything but a letter, digit, `-` or `_`; the repository is private today, but is treated as public (Q1).
+2. Its title, problem and change hold no private detail (F1), the repository being private today but treated as public (Q1); each kind is looked for in all three fields before the next kind, and the first found is reported:
+   1. a covered change's name, as a whole word, compared in any case, a word's edges being anything but a letter, digit, `-` or `_`: `it names <name>`;
+   2. the last path segment (`projectName()`) of any project in the log, as a whole word in the same way: `it holds private detail: the project <segment>`; the projects come from one new fixed query, `SELECT DISTINCT project FROM events WHERE project IS NOT NULL`, over the whole log rather than the retro's window, and are used only in code, never sent to the model;
+   3. a filesystem path: `/`, `~/` or `./` at the start of the field or after whitespace, `(`, `[`, `"`, `'` or a backtick, followed by a letter, digit, `.`, `-` or `_`; or `/Users/`, `/private/` or `/home/` anywhere, as written: `it holds private detail: a path`;
+   4. an email address: one or more letters, digits, `.`, `_`, `%`, `+` or `-`, then `@`, then one or more labels of letters, digits or `-` joined by `.`, ending in `.` and two or more letters: `it holds private detail: an email address`.
+
+   The stderr line names the kind, and only a change's or project's own name, so a full path or an address found is not repeated.
+   These checks catch the private detail that has a shape; your reading the proposal before you confirm remains the last check.
 
 **What is printed** (AC18), after the retro, with ids in full:
 
@@ -84,7 +91,7 @@ Model text goes through `markdownText()`; the issue's title is the title with co
 The issue's body is the printed section without its heading line, so what you read is what is posted.
 Then, on stderr, the record line for each model call, as now (the retro's first), then the question.
 
-**Confirming and opening** (AC22, AC23; ADR 0005; Q2).
+**Confirming and opening** (AC22, AC23; ADR 0007; Q2).
 At a terminal, the CLI asks on stderr and reads one line; `y` or `yes` (trimmed, any case) runs `gh issue create --repo richardkdrew/agentic-orc-factory --title <title> --body-file -` with no shell, the body on stdin and a 60-second `AbortSignal`, and prints `opened: <url>` on stdout from the first line of `gh`'s stdout.
 Anything else prints `not opened`; no terminal prints `not opened: confirm at a terminal to open it as an issue` without asking.
 The repository is a constant in the CLI, `FACTORY_REPO`, with no flag to change it.
@@ -119,7 +126,7 @@ No new dependency and no change to any manifest or lock file; `node:child_proces
   - `deps.run: (file, args, input, signal) => Promise<{ kind: "exited", code, stdout, stderr } | { kind: "not_found" }>`, a fake that records each call.
 - `runCli(["retro", "--log", path], deps)` with the same fakes, for AC26.
 - `propose(deps, options)` and `renderProposal(proposal)` from `@flight/core`.
-- The acceptance tests build their own logs through `node:sqlite` with the schema in `docs/ARCHITECTURE.md`, reusing `acceptance/fixtures/retro.ts`, as the flight-retro tests do; AC20 uses a covered change and project whose names the proposal's text holds in another case, AC24 checks files as AC8 does, and AC23's `gh` timeout uses a fake that never settles until its signal aborts.
+- The acceptance tests build their own logs through `node:sqlite` with the schema in `docs/ARCHITECTURE.md`, reusing `acceptance/fixtures/retro.ts`, as the flight-retro tests do; AC20 has a case for each kind, each in a different field and case where it applies: a covered change's name, a covered project's segment, the segment of a project with events only before `--since`, a path starting `/`, `~/` and `./`, `/Users/` inside a word, and an email address, with a proposal holding `and/or` that is still printed; AC24 checks files as AC8 does, and AC23's `gh` timeout uses a fake that never settles until its signal aborts.
 
 ## Out of scope
 
@@ -133,13 +140,17 @@ No new dependency and no change to any manifest or lock file; `node:child_proces
 ## Assumptions
 
 - `flight propose` prints the whole retro first, so a proposal costs two model calls, about twice a retro; the request's "after a retro" and the retro keeping no record leave no lighter way to show the causes it rests on.
-- The issue is opened by the CLI's code after your answer, never by the model, which still has no tool that writes; ADR 0005 records it, and `docs/ARCHITECTURE.md`'s "Read-only" names this one write.
-- ADR 0005 was written in this change and never merged, so, as you asked, it is edited in place to drop the `every`, `all` and `most` test (now listed among its alternatives) rather than superseded; ADR 0006 is to be removed, and nothing refers to it.
+- The issue is opened by the CLI's code after your answer, never by the model, which still has no tool that writes; ADR 0007 records it, and `docs/ARCHITECTURE.md`'s "Read-only" names this one write.
+- F1 changes the filter ADR 0005 decided, so ADR 0007 supersedes it, as my brief requires for a changed decision; ADR 0006, which the last revision meant to remove, is still in the repository, and since I can only add ADRs it is marked superseded by 0007 as well; 0005 and 0006 change only in their status line.
+- A covered project's name, which the last revision reported as `it names <name>`, is now reported as private detail, since F1 lists every project in the log under that message; a change's name keeps `it names <name>`.
+- The project check reads every project in the whole log, not only those since `--since`, as F1's "any project in the log" says; it costs one more fixed query and sends nothing more to the model.
+- A path is only what F1 describes: a relative path such as `packages/core/prompts/retro.md` or `../x` is not withheld, and `/` after whitespace starts a path, so a proposal that writes ` /retro` is withheld and can be run again.
 - The repository is a constant, since the request names it and there is one factory.
 - The proposal may cite only ids a printed cause cites, so it rests on causes that passed the retro's checks; a delivery id a cause cites counts as its change, as in the retro.
 - The criterion that checked the words (AC25) is dropped and its id is not reused, so AC26 keeps its id and the owner's and reviewer's references stay valid.
 - Issue #12 is kept to the prompt's rules, the recorded case and your run on the real log before and after, as you asked; how widely a cause claims a pattern is then not checked in code, and you read every proposal before confirming it.
-- The name check (AC20) compares whole words, so a change called `fix` does not block "a fix"; it also blocks a public project's name, such as Flight Recorder's own.
+- The name checks (AC20) compare whole words, so a change called `fix` blocks "a fix" in any case but not "prefix"; they also block a public project's name, such as Flight Recorder's own folder name.
+- F2: the recorded retro case stays as described above; a hand-written reply cannot test the model, so it is checked when `make record` re-records it.
 - The answer is read only from a TTY; piped input counts as no terminal, so a script can never confirm.
 - `gh` has 60 seconds, a timeout of its own outside the model's, since it is a network call to another service.
 - I could not check `gh`'s documentation in this session: I assume `--body-file -` reads the body from standard input, that `gh issue create` asks nothing when given a title and body, and that it prints the issue's URL on its first line of stdout; the engineer checks these on setup.

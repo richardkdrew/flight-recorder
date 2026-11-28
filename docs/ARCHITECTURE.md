@@ -80,7 +80,7 @@ It is a real agent, not a fixed prompt: for each question the model chooses whic
   The core does not import the SDK itself, because the SDK's types bring in Node's (ADR 0001).
 - The CLI uses `claude-sonnet-5-5`.
 - A retro is the exception (ADR 0004): the code builds each change's section from fixed queries, and the model, in one call with no tools, writes only the causes that repeat and what went well over the events the code chose; the core checks their citations and counts them.
-- A proposal (ADR 0006) is one more call with no tools after a retro, over the causes it printed and the events they cite; the core checks that it cites only ids those causes cite and names no covered change or project, and the CLI opens it as an issue only when the owner confirms.
+- A proposal (ADR 0005) is one more call with no tools after a retro, over the causes it printed and the events they cite; the core checks that it cites only ids those causes cite and names no covered change or project, and the CLI opens it as an issue only when the owner confirms.
 
 ## Parts
 
@@ -100,7 +100,7 @@ The CLI is never deployed; it runs only on the owner's Mac.
 The repository follows the owner's `AGENT-APPS.md` and `TYPESCRIPT.md` standards; these are the rules that matter most here.
 
 - **Read-only.** Flight Recorder never writes to the event log or the factory's code.
-  Its one write anywhere is a proposal opened as an issue on the factory repository, by the CLI's code, after the owner has read it and confirmed at a terminal (ADR 0006); the model never has a tool that writes.
+  Its one write anywhere is a proposal opened as an issue on the factory repository, by the CLI's code, after the owner has read it and confirmed at a terminal (ADR 0005); the model never has a tool that writes.
   A proposal is something the owner reads and acts on, and the owner merges every factory change.
 - **Grounded.** Every claim cites event ids or delivery ids, with counts.
   The core checks every citation before an answer is shown: each cited id exists and came from a tool in that same answer, or, in a retro, from the data the core sent.

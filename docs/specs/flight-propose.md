@@ -48,7 +48,7 @@ The retro's prompt now tells the model to claim a pattern only for the changes i
 
 ## Approach
 
-**Shape** (ADR 0004 for the retro, ADR 0006 for the proposal, which supersedes ADR 0005).
+**Shape** (ADR 0004 for the retro, ADR 0005 for the proposal).
 The retro keeps no record, so `flight propose` runs the retro itself, with the same `--since` and `--log`, and prints it exactly as `flight retro` does; you then see the very causes the proposal rests on, in the same output.
 With at least one cause printed, the core makes one more model call, with no tools, through the same `ModelRunner`.
 This is the lightest shape that meets "after a retro" without storing anything: a proposal needs the causes, the causes need the retro's call, and the alternatives (a retro that writes a file, or a propose that reads the retro's Markdown back) would add state or parse untrusted text.
@@ -84,7 +84,7 @@ Model text goes through `markdownText()`; the issue's title is the title with co
 The issue's body is the printed section without its heading line, so what you read is what is posted.
 Then, on stderr, the record line for each model call, as now (the retro's first), then the question.
 
-**Confirming and opening** (AC22, AC23; ADR 0006; Q2).
+**Confirming and opening** (AC22, AC23; ADR 0005; Q2).
 At a terminal, the CLI asks on stderr and reads one line; `y` or `yes` (trimmed, any case) runs `gh issue create --repo richardkdrew/agentic-orc-factory --title <title> --body-file -` with no shell, the body on stdin and a 60-second `AbortSignal`, and prints `opened: <url>` on stdout from the first line of `gh`'s stdout.
 Anything else prints `not opened`; no terminal prints `not opened: confirm at a terminal to open it as an issue` without asking.
 The repository is a constant in the CLI, `FACTORY_REPO`, with no flag to change it.
@@ -133,8 +133,8 @@ No new dependency and no change to any manifest or lock file; `node:child_proces
 ## Assumptions
 
 - `flight propose` prints the whole retro first, so a proposal costs two model calls, about twice a retro; the request's "after a retro" and the retro keeping no record leave no lighter way to show the causes it rests on.
-- The issue is opened by the CLI's code after your answer, never by the model, which still has no tool that writes; ADR 0006 records it, and `docs/ARCHITECTURE.md`'s "Read-only" names this one write.
-- ADR 0006 supersedes ADR 0005, which I wrote earlier in this change, only to drop the `every`, `all` and `most` test; everything else is the same.
+- The issue is opened by the CLI's code after your answer, never by the model, which still has no tool that writes; ADR 0005 records it, and `docs/ARCHITECTURE.md`'s "Read-only" names this one write.
+- ADR 0005 was written in this change and never merged, so, as you asked, it is edited in place to drop the `every`, `all` and `most` test (now listed among its alternatives) rather than superseded; ADR 0006 is to be removed, and nothing refers to it.
 - The repository is a constant, since the request names it and there is one factory.
 - The proposal may cite only ids a printed cause cites, so it rests on causes that passed the retro's checks; a delivery id a cause cites counts as its change, as in the retro.
 - The criterion that checked the words (AC25) is dropped and its id is not reused, so AC26 keeps its id and the owner's and reviewer's references stay valid.

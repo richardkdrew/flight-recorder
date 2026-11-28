@@ -1,5 +1,5 @@
 // The public entry of @flight/core: the agent that answers questions about the factory's event log,
-// and the retro over its latest accepted changes.
+// the retro over its latest accepted changes, and the one proposal drafted from a retro's causes.
 
 export { ask, MODEL } from "./ask.ts";
 export type { AskDeps, AskFailure, AskOutcome, AskRecord } from "./ask.ts";
@@ -36,6 +36,28 @@ export type {
   RetroStop,
 } from "./retro.ts";
 export { renderRetro } from "./retro-markdown.ts";
+export { findPrivateDetail, propose } from "./propose.ts";
+export type {
+  PrivateDetail,
+  Proposal,
+  ProposalFailure,
+  ProposalOutcome,
+  ProposalResult,
+  ProposeDeps,
+  ProposeResult,
+} from "./propose.ts";
+export {
+  NO_CAUSE_TO_PROPOSE,
+  renderProposal,
+  renderProposalNeeds,
+} from "./propose-markdown.ts";
+export type { RenderedProposal } from "./propose-markdown.ts";
+
+/** Where the proposal's prompt lives; the entry point reads it and passes its text to `propose`. */
+export const PROPOSE_PROMPT_URL = new URL(
+  "../prompts/propose.md",
+  import.meta.url,
+);
 
 /** Where the agent's prompt lives; the entry point reads it and passes its text to `ask`. */
 export const ASK_PROMPT_URL = new URL("../prompts/ask.md", import.meta.url);

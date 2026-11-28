@@ -1,9 +1,12 @@
-// Recorded replies: each case in recordings/ holds a question and the Messages API response bodies the model
-// gave, in order. A replay `fetch` serves them to the SDK client and keeps every request body it receives,
-// so a test can check what was sent to the model. Tests never call a live model.
+// Recorded replies: each case in recordings/ holds a question (or, for a retro, a small log of its own) and
+// the Messages API response bodies the model gave, in order. A replay `fetch` serves them to the SDK client
+// and keeps every request body it receives, so a test can check what was sent to the model. Tests never
+// call a live model.
 
 import { readdirSync, readFileSync } from "node:fs";
 import * as z from "zod";
+
+import { DataSetEvent } from "../src/seed.ts";
 
 export const RECORDINGS_URL = new URL("./recordings/", import.meta.url);
 
@@ -13,33 +16,47 @@ const Response_ = z.union([
   z.record(z.string(), z.unknown()),
 ]);
 
-export const Recording = z.strictObject({
-  /** What the case shows, for a person reading it. */
-  about: z.string(),
-  model: z.string(),
-  question: z.string(),
-  /** Hand-written cases are never re-recorded; the others are, by `make record`. */
-  hand_written: z.boolean(),
-  /** When `make record` last recorded the case from the live model; null for a case never recorded. */
-  recorded_at: z.iso.datetime({ offset: true }).nullable(),
-  /** How the question ends: an outcome or failure kind of `ask`. */
-  outcome: z.enum([
-    "answer",
-    "not_enough_data",
-    "withheld",
-    "call_cap",
-    "timeout",
-    "bad_reply",
-  ]),
-  /** Limits the case runs with, on top of the defaults. */
-  limits: z
-    .strictObject({
-      modelCalls: z.number().optional(),
-      timeoutSeconds: z.number().optional(),
-    })
-    .optional(),
-  responses: z.array(Response_),
-});
+export const Recording = z
+  .strictObject({
+    /** What the case shows, for a person reading it. */
+    about: z.string(),
+    model: z.string(),
+    /** The command the case runs: `flight ask` by default, or `flight retro`. */
+    command: z.enum(["ask", "retro"]).default("ask"),
+    /** The question an `ask` case asks. */
+    question: z.string().optional(),
+    /** A retro case's own small synthetic log, which it runs on instead of the data set. */
+    events: z.array(DataSetEvent).optional(),
+    /** Hand-written cases are never re-recorded; the others are, by `make record`. */
+    hand_written: z.boolean(),
+    /** When `make record` last recorded the case from the live model; null for a case never recorded. */
+    recorded_at: z.iso.datetime({ offset: true }).nullable(),
+    /** How the case ends: an outcome or failure kind of `ask`, or of `retro`. */
+    outcome: z.enum([
+      "answer",
+      "retro",
+      "not_enough_data",
+      "withheld",
+      "call_cap",
+      "timeout",
+      "bad_reply",
+    ]),
+    /** Limits the case runs with, on top of the defaults. */
+    limits: z
+      .strictObject({
+        modelCalls: z.number().optional(),
+        timeoutSeconds: z.number().optional(),
+      })
+      .optional(),
+    responses: z.array(Response_),
+  })
+  .refine(
+    (r) =>
+      r.command === "ask"
+        ? r.question !== undefined && r.events === undefined
+        : r.question === undefined && r.events !== undefined,
+    "an ask case has a question and no events; a retro case has events and no question",
+  );
 
 export type Recording = z.infer<typeof Recording>;
 

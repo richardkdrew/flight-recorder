@@ -1,13 +1,21 @@
 #!/usr/bin/env node
-// `make record`: asks each recorded case that is not hand-written again, of the live model, on a new
-// synthetic log, and writes the model's responses back to its file with the time and the outcome.
+// `make record`: runs each recorded case that is not hand-written again, against the live model: an ask
+// case on a new synthetic log, a retro case through retro() on a new log of its own events. It writes the
+// model's responses back to the case's file with the time and the outcome.
 // It needs ANTHROPIC_API_KEY and spends a little; tests never run it.
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ask, ASK_PROMPT_URL, MODEL } from "@flight/core";
+import {
+  ask,
+  ASK_PROMPT_URL,
+  MODEL,
+  retro,
+  RETRO_PROMPT_URL,
+  type ModelRunner,
+} from "@flight/core";
 
 import { clock, loadConfig, now, processEnv } from "../src/config.ts";
 import { anthropicRunner } from "../src/model.ts";
@@ -25,13 +33,14 @@ if (config.apiKey === undefined) {
 
 async function recordAll(apiKey: string): Promise<number> {
   const prompt = readFileSync(ASK_PROMPT_URL, "utf8");
+  const retroPrompt = readFileSync(RETRO_PROMPT_URL, "utf8");
   const dir = mkdtempSync(join(tmpdir(), "flight-record-"));
   let failures = 0;
   try {
     for (const { name, recording } of loadRecordings()) {
       if (recording.hand_written) continue;
       const path = join(dir, name.replace(/\.json$/, ".db"));
-      const seeded = seed(path, loadDataSet());
+      const seeded = seed(path, recording.events ?? loadDataSet());
       if (!seeded.ok) throw new Error(`could not seed ${path}`);
       const opened = openLog(path);
       if (!opened.ok) throw new Error(`could not open ${path}`);
@@ -45,13 +54,12 @@ async function recordAll(apiKey: string): Promise<number> {
         return response;
       };
       try {
-        const result = await ask(recording.question, {
-          log: opened.value.reader,
-          model: anthropicRunner(apiKey, recordingFetch),
-          prompt,
-          clock,
-        });
-        const outcome = result.ok ? result.value.kind : result.error.kind;
+        const outcome = await run(
+          recording,
+          opened.value.reader,
+          anthropicRunner(apiKey, recordingFetch),
+          recording.command === "retro" ? retroPrompt : prompt,
+        );
         const updated = Recording.safeParse({
           ...recording,
           model: MODEL,
@@ -61,7 +69,7 @@ async function recordAll(apiKey: string): Promise<number> {
         });
         if (!updated.success) {
           process.stderr.write(
-            `record: ${name}: the question ended as ${outcome}, which a recording cannot hold; the file is unchanged\n`,
+            `record: ${name}: the case ended as ${outcome}, which a recording cannot hold; the file is unchanged\n`,
           );
           failures += 1;
           continue;
@@ -81,4 +89,24 @@ async function recordAll(apiKey: string): Promise<number> {
     rmSync(dir, { recursive: true, force: true });
   }
   return failures > 0 ? 1 : 0;
+}
+
+/** Runs one case through the core, as `flight ask` or `flight retro` would, and gives how it ended. */
+async function run(
+  recording: Recording,
+  log: Parameters<typeof ask>[1]["log"],
+  model: ModelRunner,
+  prompt: string,
+): Promise<string> {
+  if (recording.command === "retro") {
+    const result = await retro({ log, model, prompt, clock });
+    return result.ok ? result.value.kind : result.error.kind;
+  }
+  const result = await ask(recording.question ?? "", {
+    log,
+    model,
+    prompt,
+    clock,
+  });
+  return result.ok ? result.value.kind : result.error.kind;
 }

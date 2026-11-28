@@ -440,9 +440,39 @@ const encoder = new TextEncoder();
 
 // ---------------------------------------------------------------------------------------------------------
 
+/**
+ * What a retro sent the model, which a proposal rests on: the covered change each id belongs to (null for a
+ * note under none), the covered deliveries, and each event as the model received it.
+ */
+export interface RetroSent {
+  readonly owners: ReadonlyMap<string, string | null>;
+  readonly deliveries: ReadonlySet<string>;
+  readonly events: ReadonlyMap<string, unknown>;
+}
+
 export async function retro(
   deps: RetroDeps,
   options: RetroOptions = {},
+): Promise<RetroResult> {
+  return (await retroWithData(deps, options)).result;
+}
+
+/** A retro, and what it sent the model when it made its call; `flight propose` reuses both. */
+export async function retroWithData(
+  deps: RetroDeps,
+  options: RetroOptions = {},
+): Promise<{ result: RetroResult; sent: RetroSent | null }> {
+  let sent: RetroSent | null = null;
+  const result = await runRetro(deps, options, (s) => {
+    sent = s;
+  });
+  return { result, sent };
+}
+
+async function runRetro(
+  deps: RetroDeps,
+  options: RetroOptions,
+  keep: (sent: RetroSent) => void,
 ): Promise<RetroResult> {
   const since = options.since ?? null;
   if (since !== null && !isDay(since)) {
@@ -555,6 +585,14 @@ export async function retro(
   }
   for (const n of notes) owners.set(n.id, noteOwners.get(n.id) ?? null);
   const deliveries = new Set(covered.map((c) => c.accepted.delivery));
+  keep({
+    owners,
+    deliveries,
+    events: new Map<string, unknown>([
+      ...data.changes.flatMap((c) => c.events.map((e) => [e.id, e] as const)),
+      ...data.friction_notes.map((n) => [n.id, n] as const),
+    ]),
+  });
 
   // The one model call.
   const started = deps.clock();

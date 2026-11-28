@@ -32,7 +32,7 @@ const INLINE = /[\\`*_[\]<>&~]/g;
  * `#`, `+`, `-` or `1.` escaped so it does not start a heading or list inside the line it is put in, and
  * bare URLs and email addresses broken up so GitHub-flavoured Markdown does not turn them into links.
  */
-function markdownText(text: string): string {
+export function markdownText(text: string): string {
   return oneLine(text)
     .replace(INLINE, "\\$&")
     .replace(/^[#+-]/, "\\$&")
@@ -43,21 +43,21 @@ function markdownText(text: string): string {
 }
 
 /** An id or other value as inline code. */
-const code = (text: string): string =>
+export const code = (text: string): string =>
   `\`${oneLine(text).replaceAll("`", "")}\``;
 
 /** Text for a table cell. */
 const cell = (text: string): string => text.replaceAll("|", "\\|");
 
 /** The day of a time in UTC, YYYY-MM-DD; the time as it is when it does not parse. */
-function day(time: string): string {
+export function day(time: string): string {
   const date = new Date(time);
   return Number.isNaN(date.getTime())
     ? markdownText(time)
     : date.toISOString().slice(0, 10);
 }
 
-const plural = (n: number, one: string, many: string): string =>
+export const plural = (n: number, one: string, many: string): string =>
   `${String(n)} ${n === 1 ? one : many}`;
 
 export function waited(minutes: number | null): string {

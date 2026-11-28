@@ -1,6 +1,6 @@
 # 0005: A proposal is opened as an issue on the factory repository through `gh`, only when the owner confirms it
 
-Status: proposed
+Status: superseded by 0006
 Date: 2026-11-28
 
 ## Context

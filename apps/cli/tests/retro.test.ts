@@ -549,9 +549,31 @@ describe("the causes", () => {
     expect(markdown).toContain(
       "1. \\*\\*bold\\*\\* \\[link\\](https\\://example.com) \\<script\\>x\\</script\\> (2 changes, 2 events): ",
     );
-    expect(markdown).toContain("- \\# \\_heading\\_ \\`code\\`: ");
+    expect(markdown).toContain(`- \\# \\_heading\\_ \\\`code\\\` \`${c.id}\``);
     expect(markdown).not.toContain("[link](");
     expect(markdown).not.toContain("<script>");
+  });
+
+  test("each item of what went well is its text, one space, then its ids, with no colon", async () => {
+    const { result } = await run(THREE, [
+      finalReply({
+        kind: "retro",
+        causes: [],
+        went_well: [
+          {
+            text: "The preview was accepted as working.",
+            cites: [c.id, hex32("ec02")],
+          },
+        ],
+      }),
+    ]);
+    expect(result.ok).toBe(true);
+    const markdown = renderRetro(result);
+    expect(markdown).toContain(
+      `\n- The preview was accepted as working. \`${c.id}\`, \`${hex32("ec02")}\`\n`,
+    );
+    expect(markdown).not.toContain(".:");
+    expect(markdown).not.toContain("working.: ");
   });
 
   test("Markdown in what the model says it needs is escaped", async () => {

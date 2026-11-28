@@ -166,8 +166,9 @@ export function renderRetro(result: RetroResult): string {
       }
       lines.push("", "## What went well", "");
       if (outcome.wentWell.length === 0) lines.push("Nothing to note.");
+      // The text, one space, then its ids: no colon, since the text often ends in a full stop.
       for (const item of outcome.wentWell) {
-        lines.push(`- ${markdownText(item.text)}: ${ids(item.cites)}`);
+        lines.push(`- ${markdownText(item.text)} ${ids(item.cites)}`);
       }
       lines.push("");
     }
